@@ -48,6 +48,12 @@ function PageLoader() {
 }
 
 function App() {
+  // If user opens the Admin server (port 5173) on the root path, redirect them to the admin portal
+  if (window.location.port === '5173' && window.location.pathname === '/') {
+    window.location.replace('/admin/login');
+    return null;
+  }
+
   return (
     <AdminAuthProvider>
       <AuthProvider>

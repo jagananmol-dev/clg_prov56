@@ -70,7 +70,8 @@ const loginLimiter = rateLimit({
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 // authRouter internally defines POST /login → mounts to /api/admin/login
-app.use('/api/admin',          loginLimiter, authRouter);
+app.use('/api/admin/login',    loginLimiter);
+app.use('/api/admin',          authRouter);
 app.use('/api/admin/products', productsRouter);
 app.use('/api/admin/orders',   ordersRouter);
 app.use('/api/admin/reviews',  reviewsRouter);

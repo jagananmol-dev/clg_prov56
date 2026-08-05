@@ -7,7 +7,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-function require(key: string): string {
+/** Read a required environment variable — crashes at startup if missing */
+function env(key: string): string {
   const val = process.env[key];
   if (!val) throw new Error(`[Config] Missing required environment variable: ${key}`);
   return val;
@@ -15,19 +16,19 @@ function require(key: string): string {
 
 export const config = {
   supabase: {
-    url:            require('SUPABASE_URL'),
-    serviceRoleKey: require('SUPABASE_SERVICE_ROLE_KEY'),
+    url:            env('SUPABASE_URL'),
+    serviceRoleKey: env('SUPABASE_SERVICE_ROLE_KEY'),
   },
   admin: {
-    email:        require('ADMIN_EMAIL').toLowerCase(),
-    passwordHash: require('ADMIN_PASSWORD_HASH'),
+    email:        env('ADMIN_EMAIL').toLowerCase(),
+    passwordHash: env('ADMIN_PASSWORD_HASH'),
   },
   jwt: {
-    secret:    require('ADMIN_JWT_SECRET'),
+    secret:    env('ADMIN_JWT_SECRET'),
     expiresIn: (process.env.JWT_EXPIRES_IN ?? '2h') as string,
   },
   server: {
     port:           parseInt(process.env.PORT ?? '4000', 10),
-    frontendOrigin: require('FRONTEND_ORIGIN'),
+    frontendOrigin: env('FRONTEND_ORIGIN'),
   },
 } as const;

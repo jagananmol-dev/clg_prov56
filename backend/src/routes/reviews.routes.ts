@@ -9,14 +9,14 @@
  * Admin can delete ANY review regardless of who wrote it.
  */
 import { Router } from 'express';
-import { adminSupabase } from '../lib/supabase';
+import { getAdminDB } from '../lib/supabase';
 import { requireAdmin } from '../middleware/auth.middleware';
 
 export const reviewsRouter = Router();
 
 // ── GET /api/admin/reviews ──────────────────────────────────────────────────
 reviewsRouter.get('/', requireAdmin, async (_req, res) => {
-  const { data, error } = await adminSupabase
+  const { data, error } = await getAdminDB()
     .from('reviews')
     .select(`
       id,
@@ -48,7 +48,7 @@ reviewsRouter.delete('/:id', requireAdmin, async (req, res) => {
     return;
   }
 
-  const { error } = await adminSupabase
+  const { error } = await getAdminDB()
     .from('reviews')
     .delete()
     .eq('id', id);

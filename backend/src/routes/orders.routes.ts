@@ -9,7 +9,7 @@
  * (they contact the admin who uses this panel).
  */
 import { Router } from 'express';
-import { adminSupabase } from '../lib/supabase';
+import { getAdminDB } from '../lib/supabase';
 import { requireAdmin } from '../middleware/auth.middleware';
 
 export const ordersRouter = Router();
@@ -17,7 +17,7 @@ export const ordersRouter = Router();
 // ── GET /api/admin/orders ───────────────────────────────────────────────────
 ordersRouter.get('/', requireAdmin, async (_req, res) => {
   // Fetch orders and their items in one query using PostgREST's foreign-key expansion
-  const { data, error } = await adminSupabase
+  const { data, error } = await getAdminDB()
     .from('orders')
     .select(`
       id,
@@ -58,7 +58,7 @@ ordersRouter.patch('/:id/cancel', requireAdmin, async (req, res) => {
   }
 
   // Guard: don't cancel already-cancelled or delivered orders
-  const { data: existing, error: fetchErr } = await adminSupabase
+  const { data: existing, error: fetchErr } = await getAdminDB()
     .from('orders')
     .select('status')
     .eq('id', id)
@@ -79,7 +79,7 @@ ordersRouter.patch('/:id/cancel', requireAdmin, async (req, res) => {
     return;
   }
 
-  const { data, error } = await adminSupabase
+  const { data, error } = await getAdminDB()
     .from('orders')
     .update({ status: 'cancelled' })
     .eq('id', id)

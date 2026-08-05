@@ -10,7 +10,7 @@
  */
 import { Router } from 'express';
 import { z } from 'zod';
-import { adminSupabase } from '../lib/supabase';
+import { getAdminDB } from '../lib/supabase';
 import { requireAdmin } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 
@@ -32,7 +32,7 @@ const addProductSchema = z.object({
 
 // ── GET /api/admin/products ─────────────────────────────────────────────────
 productsRouter.get('/', requireAdmin, async (_req, res) => {
-  const { data, error } = await adminSupabase
+  const { data, error } = await getAdminDB()
     .from('products')
     .select('*, categories(id, name)')
     .order('created_at', { ascending: false });
@@ -48,7 +48,7 @@ productsRouter.get('/', requireAdmin, async (_req, res) => {
 
 // ── POST /api/admin/products ────────────────────────────────────────────────
 productsRouter.post('/', requireAdmin, validate(addProductSchema), async (req, res) => {
-  const { data, error } = await adminSupabase
+  const { data, error } = await getAdminDB()
     .from('products')
     .insert([req.body])
     .select()
@@ -74,7 +74,7 @@ productsRouter.delete('/:id', requireAdmin, async (req, res) => {
     return;
   }
 
-  const { error } = await adminSupabase
+  const { error } = await getAdminDB()
     .from('products')
     .delete()
     .eq('id', id);

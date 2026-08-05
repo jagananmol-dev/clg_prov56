@@ -94,3 +94,39 @@ ordersRouter.patch('/:id/cancel', requireAdmin, async (req, res) => {
 
   res.json({ success: true, order: data });
 });
+
+// ── PATCH /api/admin/orders/:id/status ─────────────────────────────────────
+// Update order status (pending → processing → shipped → delivered)
+ordersRouter.patch('/:id/status', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const VALID_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    res.status(400).json({ error: 'Invalid order ID.' });
+    return;
+  }
+
+  if (!status || !VALID_STATUSES.includes(status)) {
+    res.status(400).json({ error: `Status must be one of: ${VALID_STATUSES.join(', ')}` });
+    return;
+  }
+
+  const { data, error } = await getAdminDB()
+    .from('orders')
+    .update({ status })
+    .eq('id', id)
+    .select('id, status')
+    .single();
+
+  if (error) {
+    console.error('[ORDERS] Status update error:', error.message);
+    res.status(500).json({ error: 'Failed to update order status.' });
+    return;
+  }
+
+  console.log(`[ORDERS] Order ${id} → status=${status}`);
+  res.json({ success: true, order: data });
+});

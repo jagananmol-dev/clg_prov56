@@ -12,7 +12,6 @@ interface Review {
   id: string; content: string; rating: number; created_at: string;
   user_id: string;
   products: { id: string; name: string } | null;
-  profiles: { full_name: string | null } | null;
 }
 
 export default function AdminReviews() {
@@ -61,7 +60,7 @@ export default function AdminReviews() {
                         {review.products?.name ?? 'Unknown product'}
                       </span>
                       <span className="text-xs text-[#8A8A8A]">
-                        by {review.profiles?.full_name ?? 'Anonymous'}
+                        by User #{review.user_id.slice(0, 8)}
                       </span>
                       <span className="text-xs text-[#8A8A8A]">
                         · {new Date(review.created_at).toLocaleDateString('en-IN')}

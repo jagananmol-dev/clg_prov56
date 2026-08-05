@@ -6,7 +6,7 @@
  * Admin can cancel any non-delivered, non-already-cancelled order.
  */
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
@@ -18,11 +18,14 @@ interface Order {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:   'bg-amber-100 text-amber-700',
-  confirmed: 'bg-blue-100 text-blue-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-600',
+  pending:    'bg-amber-100 text-amber-700',
+  processing: 'bg-blue-100 text-blue-700',
+  shipped:    'bg-indigo-100 text-indigo-700',
+  delivered:  'bg-green-100 text-green-700',
+  cancelled:  'bg-red-100 text-red-600',
 };
+
+const STATUS_OPTIONS = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 export default function AdminOrders() {
   const { adminFetch } = useAdminAuth();
@@ -30,6 +33,7 @@ export default function AdminOrders() {
   const [loading,  setLoading]  = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -46,6 +50,16 @@ export default function AdminOrders() {
     const res = await adminFetch(`/api/admin/orders/${id}/cancel`, { method: 'PATCH' });
     if (res.ok) loadOrders();
     setCancelling(null);
+  }
+
+  async function handleStatusChange(id: string, status: string) {
+    setUpdatingStatus(id);
+    await adminFetch(`/api/admin/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    await loadOrders();
+    setUpdatingStatus(null);
   }
 
   return (
@@ -81,22 +95,24 @@ export default function AdminOrders() {
                       <td className="px-5 py-3 text-[#5A5A5A]">{new Date(order.created_at).toLocaleDateString('en-IN')}</td>
                       <td className="px-5 py-3 font-semibold text-[#3D2B0E]">₹{order.total}</td>
                       <td className="px-5 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {order.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {order.status}
+                          </span>
+                          {updatingStatus === order.id && <RefreshCw size={12} className="animate-spin text-[#8A8A8A]" />}
+                        </div>
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {order.status !== 'cancelled' && order.status !== 'delivered' && (
-                            <button
-                              onClick={e => { e.stopPropagation(); handleCancel(order.id); }}
-                              disabled={cancelling === order.id}
-                              className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50 px-2 py-1 rounded-lg hover:bg-red-50"
-                            >
-                              <XCircle size={13} />
-                              {cancelling === order.id ? 'Cancelling…' : 'Cancel'}
-                            </button>
-                          )}
+                          <select
+                            value={order.status}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => { e.stopPropagation(); handleStatusChange(order.id, e.target.value); }}
+                            className="text-xs border border-[#E8DDD0] rounded-lg px-2 py-1 bg-white text-[#3D2B0E] focus:outline-none"
+                            disabled={updatingStatus === order.id}
+                          >
+                            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
                           {expanded === order.id ? <ChevronUp size={15} className="text-[#8A8A8A]" /> : <ChevronDown size={15} className="text-[#8A8A8A]" />}
                         </div>
                       </td>

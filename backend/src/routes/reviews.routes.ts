@@ -24,8 +24,7 @@ reviewsRouter.get('/', requireAdmin, async (_req, res) => {
       rating,
       created_at,
       user_id,
-      products (id, name),
-      profiles (full_name)
+      products (id, name)
     `)
     .order('created_at', { ascending: false });
 
@@ -37,6 +36,7 @@ reviewsRouter.get('/', requireAdmin, async (_req, res) => {
 
   res.json({ reviews: data });
 });
+
 
 // ── DELETE /api/admin/reviews/:id ───────────────────────────────────────────
 reviewsRouter.delete('/:id', requireAdmin, async (req, res) => {

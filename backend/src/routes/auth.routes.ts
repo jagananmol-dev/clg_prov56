@@ -42,7 +42,7 @@ authRouter.post('/login', validate(loginSchema), async (req, res) => {
   const token = jwt.sign(
     { email: config.admin.email, role: 'admin' },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn as string }
+    { expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'] }
   );
 
   console.log(`[AUTH] Admin login successful at ${new Date().toISOString()}`);

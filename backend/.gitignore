@@ -1,0 +1,16 @@
+# Dependencies — never commit these
+node_modules/
+
+# TypeScript build output
+dist/
+
+# Environment secrets
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.log

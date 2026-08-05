@@ -245,6 +245,97 @@ A PostgreSQL trigger (`on_auth_user_created`) automatically inserts a row into `
 
 ---
 
+## 🔐 Admin System Setup
+
+The admin panel is powered by a **separate Express.js backend** (`backend/`) that uses Supabase's `service_role` key to bypass RLS and get full database access.
+
+### Step 1 — Configure backend environment
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Open `backend/.env` and fill in your Supabase **service_role** key (found in Supabase Dashboard → Project Settings → API → `service_role` key):
+
+```env
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJh...  ← service_role key (NOT anon key)
+ADMIN_EMAIL=admin@dormstore.com
+ADMIN_PASSWORD_HASH=$2a$12$...     ← bcrypt hash of your password
+ADMIN_JWT_SECRET=...               ← long random string
+```
+
+### Step 2 — Generate your admin password hash
+
+```bash
+cd backend
+node -e "require('bcryptjs').hash('YourNewPassword', 12).then(h => console.log(h))"
+```
+
+Paste the output into `ADMIN_PASSWORD_HASH` in `backend/.env`.
+
+### Step 3 — Add admin API URL to frontend `.env`
+
+```env
+# In project/.env (frontend)
+VITE_ADMIN_API_URL=http://localhost:4000
+```
+
+### Step 4 — Run database migration
+
+In Supabase Dashboard → SQL Editor, run:
+```
+supabase/migrations/20260805_admin_reviews_table.sql
+```
+
+This creates the `reviews` table and tightens product/category write permissions (only the backend service_role can write products now).
+
+### Step 5 — Start the admin backend
+
+```bash
+# In a NEW terminal (keep the frontend running in another)
+cd backend
+npm run dev
+```
+
+Backend starts at **http://localhost:4000**. You'll see:
+```
+[SERVER] Admin API running on http://localhost:4000
+[SERVER] Accepting requests from: http://localhost:5173
+```
+
+### Step 6 — Open the admin panel
+
+Go to **http://localhost:5173/admin/login** and sign in with:
+- **Email:** `admin@dormstore.com` (or whatever you set)
+- **Password:** the plain-text password you hashed in Step 2
+
+### Admin Panel Routes
+
+| Route | Purpose |
+|---|---|
+| `/admin/login` | Admin login (5 attempts/15 min rate limit) |
+| `/admin` | Dashboard — live stats |
+| `/admin/products` | Add/delete products |
+| `/admin/orders` | View all orders, cancel any order |
+| `/admin/reviews` | View all reviews, delete any review |
+
+### Admin API Security Summary
+
+| Protection | Detail |
+|---|---|
+| **Password** | bcrypt (cost 12) — never stored as plain text |
+| **Session** | JWT (HS256, 2h expiry) stored in `sessionStorage` — clears on tab close |
+| **Rate limit** | 5 login attempts per 15 minutes per IP |
+| **Headers** | Helmet.js — 12 security headers (CSP, HSTS, X-Frame-Options…) |
+| **CORS** | Only `FRONTEND_ORIGIN` can call the API |
+| **Input** | Zod validates every request body |
+| **DB key** | `service_role` stays in `backend/.env` — never reaches the browser |
+| **Audit** | Every POST/PATCH/DELETE logged: timestamp + endpoint + admin email + status |
+
+---
+
 ## ▶️ Running Locally
 
 | Command | What it does |

@@ -60,8 +60,12 @@ export default function Shop() {
     let list = products.filter(p => p.price <= debouncedPrice);
     if (activeCategory !== 'all') list = list.filter(p => p.category === activeCategory);
     if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+      const searchTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
+      list = list.filter(p => {
+        const nameMatch = p.name.toLowerCase();
+        const descMatch = (p.description || '').toLowerCase();
+        return searchTerms.every(term => nameMatch.includes(term) || descMatch.includes(term));
+      });
     }
     if (sortBy === 'price-low') list = [...list].sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') list = [...list].sort((a, b) => b.price - a.price);

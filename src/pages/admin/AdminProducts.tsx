@@ -3,20 +3,27 @@
  * @description Admin product management at /admin/products.
  *
  * Features:
- *  - Table of all products (image, name, category, price, tag)
- *  - "Add Product" slide-in form with full Zod-validated input
+ *  - Table of all products (image, name, category, price, tag, featured)
+ *  - "Add Product" slide-in form with image upload to Supabase Storage
+ *  - ⭐ Toggle featured / Best Seller status per product
  *  - Delete product with confirmation dialog
  */
 import { useState, useEffect, FormEvent, useRef } from 'react';
-import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon as ImageIconIcon, Star } from 'lucide-react';
+import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon, Star } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
 const API_BASE = import.meta.env.VITE_ADMIN_API_URL ?? 'http://localhost:4000';
 
 interface Product {
-  id: string; name: string; category_id: string; price: number;
-  original_price: number; image: string; tag: string | null; description: string;
+  id: string;
+  name: string;
+  category_id: string;
+  price: number;
+  original_price: number;
+  image: string;
+  tag: string | null;
+  description: string;
   is_featured?: boolean;
   categories?: { name: string };
 }
@@ -24,41 +31,47 @@ interface Category { id: string; name: string; }
 
 const EMPTY_FORM = {
   name: '', category_id: '', price: '', original_price: '',
-  image: '', tag: '', description: '', is_featured: false,
+  tag: '', description: '', is_featured: false,
 };
 
 export default function AdminProducts() {
   const { adminFetch, token } = useAdminAuth();
-  const [products,    setProducts]    = useState<Product[]>([]);
-  const [categories,  setCategories]  = useState<Category[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [showForm,    setShowForm]    = useState(false);
-  const [form,        setForm]        = useState(EMPTY_FORM);
-  const [saving,      setSaving]      = useState(false);
-  const [formError,   setFormError]   = useState<string | null>(null);
-  const [deleteId,    setDeleteId]    = useState<string | null>(null);
-  const [uploading,   setUploading]   = useState(false);
-  const [imgPreview,  setImgPreview]  = useState<string>('');
+  const [products,   setProducts]   = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showForm,   setShowForm]   = useState(false);
+  const [form,       setForm]       = useState(EMPTY_FORM);
+  const [saving,     setSaving]     = useState(false);
+  const [formError,  setFormError]  = useState<string | null>(null);
+  const [deleteId,   setDeleteId]   = useState<string | null>(null);
+  const [uploading,  setUploading]  = useState(false);
+  const [imgPreview, setImgPreview] = useState<string>('');
+  const [imgUrl,     setImgUrl]     = useState<string>('');  // actual storage URL
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pRes, cats] = await Promise.all([
+      const [pRes, cRes] = await Promise.all([
         adminFetch('/api/admin/products').then(r => r.json()),
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/categories?select=id,name`, {
-          headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` }
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/categories?select=id,name&order=name.asc`, {
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
         }).then(r => r.json()),
       ]);
       setProducts(pRes.products ?? []);
-      setCategories(Array.isArray(cats) ? cats : []);
-    } catch { /* backend not ready yet */ }
+      setCategories(Array.isArray(cRes) ? cRes : []);
+    } catch (e) {
+      console.error('[AdminProducts] loadData error:', e);
+    }
     setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []); // eslint-disable-line
 
-  /** Upload file to Supabase Storage via the backend upload route */
+  /** Upload image file to Supabase Storage via the backend upload endpoint */
   async function handleFileUpload(file: File) {
     setUploading(true);
     setFormError(null);
@@ -72,7 +85,7 @@ export default function AdminProducts() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Upload failed');
-      setForm(f => ({ ...f, image: data.url }));
+      setImgUrl(data.url);
       setImgPreview(data.url);
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Image upload failed.');
@@ -81,13 +94,39 @@ export default function AdminProducts() {
     }
   }
 
+  function resetForm() {
+    setForm(EMPTY_FORM);
+    setImgPreview('');
+    setImgUrl('');
+    setFormError(null);
+  }
+
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
 
-    // Client-side: make sure an image was uploaded
-    if (!form.image) {
+    if (!imgUrl) {
       setFormError('Please upload a product image before adding.');
+      return;
+    }
+    if (!form.name.trim()) {
+      setFormError('Product name is required.');
+      return;
+    }
+    if (!form.category_id) {
+      setFormError('Please select a category.');
+      return;
+    }
+
+    const price = parseInt(form.price);
+    const originalPrice = parseInt(form.original_price);
+
+    if (isNaN(price) || price <= 0) {
+      setFormError('Please enter a valid price.');
+      return;
+    }
+    if (isNaN(originalPrice) || originalPrice <= 0) {
+      setFormError('Please enter a valid original price.');
       return;
     }
 
@@ -96,10 +135,13 @@ export default function AdminProducts() {
     const res = await adminFetch('/api/admin/products', {
       method: 'POST',
       body: JSON.stringify({
-        ...form,
-        price:          parseInt(form.price),
-        original_price: parseInt(form.original_price),
-        tag:            form.tag || null,
+        name:           form.name.trim(),
+        category_id:    form.category_id,
+        price,
+        original_price: originalPrice,
+        image:          imgUrl,
+        tag:            form.tag.trim() || null,
+        description:    form.description.trim(),
         is_featured:    form.is_featured,
       }),
     });
@@ -112,8 +154,7 @@ export default function AdminProducts() {
       return;
     }
 
-    setForm(EMPTY_FORM);
-    setImgPreview('');
+    resetForm();
     setShowForm(false);
     loadData();
   }
@@ -128,51 +169,28 @@ export default function AdminProducts() {
       method: 'PATCH',
       body: JSON.stringify({ is_featured: !currentStatus }),
     });
-    if (res.ok) {
-      loadData();
-    }
+    if (res.ok) loadData();
   }
-
-  const field = (key: keyof typeof EMPTY_FORM, label: string, type = 'text', extra?: object) => (
-    <div>
-      <label className="block text-xs font-medium text-[#5A5A5A] mb-1">{label}</label>
-      {key === 'description' ? (
-        <textarea
-          required value={form[key]}
-          onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-          rows={3}
-          className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40 resize-none"
-          {...extra}
-        />
-      ) : (
-        <input
-          type={type} value={form[key]} required={key !== 'tag'}
-          onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-          className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
-          {...extra}
-        />
-      )}
-    </div>
-  );
 
   return (
     <AdminLayout>
       <div className="p-8">
-        {/* Header */}
+
+        {/* ── Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-[#1C1C1C]">Products</h1>
             <p className="text-sm text-[#8A8A8A]">{products.length} products in catalog</p>
           </div>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => { resetForm(); setShowForm(true); }}
             className="flex items-center gap-2 bg-[#3D2B0E] text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#5A3F1A] transition-colors"
           >
             <Plus size={15} /> Add Product
           </button>
         </div>
 
-        {/* Table */}
+        {/* ── Products Table ── */}
         {loading ? (
           <p className="text-sm text-[#8A8A8A]">Loading products…</p>
         ) : (
@@ -238,13 +256,20 @@ export default function AdminProducts() {
       {/* ── Add Product Slide-in Form ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/40" onClick={() => setShowForm(false)} />
-          <div className="w-full max-w-md bg-white shadow-2xl overflow-y-auto">
+          {/* backdrop */}
+          <div className="flex-1 bg-black/40" onClick={() => { setShowForm(false); resetForm(); }} />
+          {/* panel */}
+          <div className="w-full max-w-md bg-white shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-[#E8DDD0]">
               <h2 className="font-semibold text-[#1C1C1C]">Add New Product</h2>
-              <button onClick={() => setShowForm(false)}><X size={18} className="text-[#5A5A5A]" /></button>
+              <button onClick={() => { setShowForm(false); resetForm(); }}>
+                <X size={18} className="text-[#5A5A5A]" />
+              </button>
             </div>
-            <form onSubmit={handleAdd} className="p-6 space-y-4">
+
+            <form onSubmit={handleAdd} className="p-6 space-y-4 flex-1">
+
+              {/* Error banner */}
               {formError && (
                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
                   <AlertCircle size={15} className="mt-0.5 shrink-0" />
@@ -252,11 +277,20 @@ export default function AdminProducts() {
                 </div>
               )}
 
-              {field('name', 'Product Name')}
-
-              {/* Category dropdown */}
+              {/* Product Name */}
               <div>
-                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Category</label>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Product Name *</label>
+                <input
+                  type="text" required value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. A5 Spiral Notebook"
+                  className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Category *</label>
                 <select
                   required value={form.category_id}
                   onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
@@ -267,57 +301,87 @@ export default function AdminProducts() {
                 </select>
               </div>
 
+              {/* Price & Original Price */}
               <div className="grid grid-cols-2 gap-3">
-                {field('price', 'Price (₹)', 'number', { min: 1 })}
-                {field('original_price', 'Original Price (₹)', 'number', { min: 1 })}
+                <div>
+                  <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Price (₹) *</label>
+                  <input
+                    type="number" required min={1} value={form.price}
+                    onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                    placeholder="149"
+                    className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Original Price (₹) *</label>
+                  <input
+                    type="number" required min={1} value={form.original_price}
+                    onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))}
+                    placeholder="199"
+                    className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+                  />
+                </div>
               </div>
 
-              {/* Image — file upload */}
+              {/* Image Upload */}
               <div>
-                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Product Image</label>
-
-                {/* Upload button */}
-                <div className="flex gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    disabled={uploading}
-                    className="flex w-full justify-center items-center gap-2 bg-[#FAF7F2] border-2 border-dashed border-[#E8DDD0] text-[#5A5A5A] px-3 py-4 rounded-xl text-sm font-medium hover:bg-[#F0E8DC] disabled:opacity-60 transition-colors"
-                  >
-                    <Upload size={16} />
-                    {uploading ? 'Uploading...' : 'Upload Image'}
-                  </button>
-                </div>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Product Image *</label>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="flex w-full justify-center items-center gap-2 bg-[#FAF7F2] border-2 border-dashed border-[#E8DDD0] text-[#5A5A5A] px-3 py-4 rounded-xl text-sm font-medium hover:bg-[#F0E8DC] disabled:opacity-60 transition-colors"
+                >
+                  <Upload size={16} />
+                  {uploading ? 'Uploading…' : imgUrl ? 'Change Image' : 'Click to Upload Image'}
+                </button>
                 <input
                   ref={fileRef} type="file" accept="image/*" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
                 />
-
-                {/* Live preview */}
-                {imgPreview && (
+                {imgPreview ? (
                   <div className="mt-2 flex items-center gap-3">
                     <img
                       src={imgPreview} alt="preview"
-                      className="w-16 h-16 rounded-xl object-cover border border-[#E8DDD0] bg-[#FAF7F2]"
+                      className="w-16 h-16 rounded-xl object-cover border border-[#E8DDD0]"
                       onError={e => (e.currentTarget.style.display = 'none')}
                     />
-                    <span className="text-xs text-[#8A8A8A]">Image uploaded</span>
+                    <span className="text-xs text-green-700 font-medium">✓ Image uploaded</span>
                   </div>
-                )}
-                {!imgPreview && (
+                ) : (
                   <div className="mt-2 w-16 h-16 rounded-xl border-2 border-dashed border-[#E8DDD0] flex items-center justify-center">
                     <ImageIcon size={20} className="text-[#C4A265]/40" />
                   </div>
                 )}
               </div>
-              {field('tag', 'Badge (optional)', 'text', { placeholder: 'Best Seller / New / Premium' })}
-              {field('description', 'Description')}
 
-              {/* Featured / Best Seller toggle */}
+              {/* Badge / Tag */}
+              <div>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Badge (optional)</label>
+                <input
+                  type="text" value={form.tag}
+                  onChange={e => setForm(f => ({ ...f, tag: e.target.value }))}
+                  placeholder="Best Seller / New / Premium"
+                  className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Description *</label>
+                <textarea
+                  required value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  rows={3}
+                  placeholder="Describe the product briefly..."
+                  className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40 resize-none"
+                />
+              </div>
+
+              {/* Featured toggle */}
               <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                 <input
-                  type="checkbox"
-                  id="is_featured"
+                  type="checkbox" id="is_featured"
                   checked={form.is_featured}
                   onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))}
                   className="w-4 h-4 accent-[#C4A265] rounded"
@@ -329,8 +393,8 @@ export default function AdminProducts() {
 
               <button
                 type="submit"
-                disabled={saving}
-                className="w-full bg-[#3D2B0E] text-white py-3 rounded-full text-sm font-medium hover:bg-[#5A3F1A] disabled:opacity-60 mt-2"
+                disabled={saving || uploading}
+                className="w-full bg-[#3D2B0E] text-white py-3 rounded-full text-sm font-medium hover:bg-[#5A3F1A] disabled:opacity-60 mt-2 transition-colors"
               >
                 {saving ? 'Saving…' : 'Add Product'}
               </button>
@@ -346,8 +410,12 @@ export default function AdminProducts() {
             <h3 className="font-semibold text-[#1C1C1C] mb-2">Delete Product?</h3>
             <p className="text-sm text-[#5A5A5A] mb-5">This will permanently remove the product and its associated order items. This cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 border border-[#E8DDD0] py-2.5 rounded-full text-sm font-medium">Cancel</button>
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 text-white py-2.5 rounded-full text-sm font-medium hover:bg-red-600">Delete</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 border border-[#E8DDD0] py-2.5 rounded-full text-sm font-medium">
+                Cancel
+              </button>
+              <button onClick={() => handleDelete(deleteId)} className="flex-1 bg-red-500 text-white py-2.5 rounded-full text-sm font-medium hover:bg-red-600">
+                Delete
+              </button>
             </div>
           </div>
         </div>

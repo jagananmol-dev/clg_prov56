@@ -7,10 +7,12 @@
  *  - "Add Product" slide-in form with full Zod-validated input
  *  - Delete product with confirmation dialog
  */
-import { useState, useEffect, FormEvent } from 'react';
-import { Plus, Trash2, X, Package, AlertCircle } from 'lucide-react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
+import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
+
+const API_BASE = import.meta.env.VITE_ADMIN_API_URL ?? 'http://localhost:4000';
 
 interface Product {
   id: string; name: string; category_id: string; price: number;
@@ -25,7 +27,7 @@ const EMPTY_FORM = {
 };
 
 export default function AdminProducts() {
-  const { adminFetch } = useAdminAuth();
+  const { adminFetch, token } = useAdminAuth();
   const [products,    setProducts]    = useState<Product[]>([]);
   const [categories,  setCategories]  = useState<Category[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -34,24 +36,49 @@ export default function AdminProducts() {
   const [saving,      setSaving]      = useState(false);
   const [formError,   setFormError]   = useState<string | null>(null);
   const [deleteId,    setDeleteId]    = useState<string | null>(null);
+  const [uploading,   setUploading]   = useState(false);
+  const [imgPreview,  setImgPreview]  = useState<string>('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
     setLoading(true);
-    const [pRes, cRes] = await Promise.all([
-      adminFetch('/api/admin/products').then(r => r.json()),
-      fetch(`${import.meta.env.VITE_ADMIN_API_URL ?? 'http://localhost:4000'}/health`).then(() =>
+    try {
+      const [pRes, cats] = await Promise.all([
+        adminFetch('/api/admin/products').then(r => r.json()),
         fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/categories?select=id,name`, {
           headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` }
-        }).then(r => r.json())
-      ),
-    ]).catch(() => [{ products: [] }, []]);
-
-    setProducts(pRes.products ?? []);
-    setCategories(Array.isArray(cRes) ? cRes : []);
+        }).then(r => r.json()),
+      ]);
+      setProducts(pRes.products ?? []);
+      setCategories(Array.isArray(cats) ? cats : []);
+    } catch { /* backend not ready yet */ }
     setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []); // eslint-disable-line
+
+  /** Upload file to Supabase Storage via the backend upload route */
+  async function handleFileUpload(file: File) {
+    setUploading(true);
+    setFormError(null);
+    const fd = new FormData();
+    fd.append('image', file);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+      setForm(f => ({ ...f, image: data.url }));
+      setImgPreview(data.url);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Image upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
@@ -215,7 +242,53 @@ export default function AdminProducts() {
                 {field('original_price', 'Original Price (₹)', 'number', { min: 1 })}
               </div>
 
-              {field('image', 'Image URL', 'url')}
+              {/* Image — file upload OR URL paste */}
+              <div>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Product Image</label>
+
+                {/* Upload button */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-1.5 bg-[#FAF7F2] border border-[#E8DDD0] text-[#5A5A5A] px-3 py-2 rounded-xl text-xs font-medium hover:bg-[#F0E8DC] disabled:opacity-60"
+                  >
+                    <Upload size={13} />
+                    {uploading ? 'Uploading…' : 'Upload from computer'}
+                  </button>
+                  <span className="text-xs text-[#8A8A8A] self-center">or paste URL below</span>
+                </div>
+                <input
+                  ref={fileRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
+                />
+
+                {/* URL input */}
+                <input
+                  type="url" value={form.image} required
+                  placeholder="https://drive.google.com/uc?export=view&id=…"
+                  onChange={e => { setForm(f => ({ ...f, image: e.target.value })); setImgPreview(e.target.value); }}
+                  className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+                />
+
+                {/* Live preview */}
+                {imgPreview && (
+                  <div className="mt-2 flex items-center gap-3">
+                    <img
+                      src={imgPreview} alt="preview"
+                      className="w-16 h-16 rounded-xl object-cover border border-[#E8DDD0] bg-[#FAF7F2]"
+                      onError={e => (e.currentTarget.style.display = 'none')}
+                    />
+                    <span className="text-xs text-[#8A8A8A]">Preview</span>
+                  </div>
+                )}
+                {!imgPreview && (
+                  <div className="mt-2 w-16 h-16 rounded-xl border-2 border-dashed border-[#E8DDD0] flex items-center justify-center">
+                    <ImageIcon size={20} className="text-[#C4A265]/40" />
+                  </div>
+                )}
+              </div>
               {field('tag', 'Badge (optional)', 'text', { placeholder: 'Best Seller / New / Premium' })}
               {field('description', 'Description')}
 

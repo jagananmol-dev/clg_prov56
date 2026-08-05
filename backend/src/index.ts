@@ -18,6 +18,7 @@
  *  PATCH  /api/admin/orders/:id/cancel
  *  GET    /api/admin/reviews
  *  DELETE /api/admin/reviews/:id
+ *  POST   /api/admin/upload   (image upload → Supabase Storage)
  */
 import express from 'express';
 import helmet from 'helmet';
@@ -29,6 +30,7 @@ import { authRouter } from './routes/auth.routes';
 import { productsRouter } from './routes/products.routes';
 import { ordersRouter } from './routes/orders.routes';
 import { reviewsRouter } from './routes/reviews.routes';
+import { uploadRouter } from './routes/upload.routes';
 
 const app = express();
 
@@ -72,6 +74,8 @@ app.use('/api/admin',          loginLimiter, authRouter);
 app.use('/api/admin/products', productsRouter);
 app.use('/api/admin/orders',   ordersRouter);
 app.use('/api/admin/reviews',  reviewsRouter);
+// Upload route uses its own multer middleware (not express.json)
+app.use('/api/admin/upload',   uploadRouter);
 
 // ── Health check (unauthenticated — for uptime monitors) ─────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'dorm-store-admin-api' }));

@@ -18,6 +18,7 @@ const API_BASE    = import.meta.env.VITE_ADMIN_API_URL ?? 'http://localhost:4000
 
 interface AdminAuthContextType {
   isAdminAuthenticated: boolean;
+  token: string | null;
   adminSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
   adminSignOut: () => void;
   adminFetch: (path: string, options?: RequestInit) => Promise<Response>;
@@ -78,6 +79,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   return (
     <AdminAuthContext.Provider value={{
       isAdminAuthenticated: !!token,
+      token,
       adminSignIn,
       adminSignOut,
       adminFetch,

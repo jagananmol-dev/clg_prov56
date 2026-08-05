@@ -4,9 +4,10 @@ import ProductCard from '@/components/ProductCard';
 import { useProducts } from '@/hooks/useProducts';
 
 export default function BestSelling() {
-  // Fetch live products from Supabase; use first 5 as "best selling"
+  // Show admin-curated featured products; fall back to first 5 if none marked yet
   const { products, loading } = useProducts();
-  const bestSelling = products.slice(0, 5);
+  const featured = products.filter(p => p.isFeatured);
+  const bestSelling = featured.length > 0 ? featured.slice(0, 5) : products.slice(0, 5);
 
   return (
     <section className="py-16 md:py-20 bg-white">

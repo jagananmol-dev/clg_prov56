@@ -17,13 +17,14 @@ const API_BASE = import.meta.env.VITE_ADMIN_API_URL ?? 'http://localhost:4000';
 interface Product {
   id: string; name: string; category_id: string; price: number;
   original_price: number; image: string; tag: string | null; description: string;
+  is_featured?: boolean;
   categories?: { name: string };
 }
 interface Category { id: string; name: string; }
 
 const EMPTY_FORM = {
   name: '', category_id: '', price: '', original_price: '',
-  image: '', tag: '', description: '',
+  image: '', tag: '', description: '', is_featured: false,
 };
 
 export default function AdminProducts() {
@@ -83,6 +84,13 @@ export default function AdminProducts() {
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
+
+    // Client-side: make sure an image was uploaded
+    if (!form.image) {
+      setFormError('Please upload a product image before adding.');
+      return;
+    }
+
     setSaving(true);
 
     const res = await adminFetch('/api/admin/products', {
@@ -92,6 +100,7 @@ export default function AdminProducts() {
         price:          parseInt(form.price),
         original_price: parseInt(form.original_price),
         tag:            form.tag || null,
+        is_featured:    form.is_featured,
       }),
     });
 
@@ -104,6 +113,7 @@ export default function AdminProducts() {
     }
 
     setForm(EMPTY_FORM);
+    setImgPreview('');
     setShowForm(false);
     loadData();
   }
@@ -181,6 +191,9 @@ export default function AdminProducts() {
                     <td className="px-5 py-3">
                       {p.tag && (
                         <span className="bg-[#E8DDD0] text-[#7C5A2A] text-xs px-2.5 py-1 rounded-full">{p.tag}</span>
+                      )}
+                      {p.is_featured && (
+                        <span className="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full ml-1">⭐ Featured</span>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
@@ -282,6 +295,20 @@ export default function AdminProducts() {
               </div>
               {field('tag', 'Badge (optional)', 'text', { placeholder: 'Best Seller / New / Premium' })}
               {field('description', 'Description')}
+
+              {/* Featured / Best Seller toggle */}
+              <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <input
+                  type="checkbox"
+                  id="is_featured"
+                  checked={form.is_featured}
+                  onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))}
+                  className="w-4 h-4 accent-[#C4A265] rounded"
+                />
+                <label htmlFor="is_featured" className="text-sm text-[#5A5A5A] cursor-pointer">
+                  ⭐ Mark as <strong>Best Seller</strong> (shown on homepage)
+                </label>
+              </div>
 
               <button
                 type="submit"

@@ -24,10 +24,11 @@ const addProductSchema = z.object({
   original_price: z.number().int().positive(),
   rating:         z.number().min(0).max(5).optional().default(0),
   reviews:        z.number().int().min(0).optional().default(0),
-  image:          z.string().url({ message: 'image must be a valid URL' }),
+  image:          z.string().min(1, { message: 'Please upload a product image' }),
   tag:            z.string().max(30).optional().nullable(),
   description:    z.string().min(10).max(2000).trim(),
   in_stock:       z.boolean().optional().default(true),
+  is_featured:    z.boolean().optional().default(false),
 });
 
 // ── GET /api/admin/products ─────────────────────────────────────────────────

@@ -28,9 +28,10 @@ export interface Product {
   originalPrice: number; // original price for discount % calculation
   rating: number;     // average rating (0–5)
   reviews: number;    // number of reviews
-  image: string;      // Pexels CDN URL
+  image: string;      // Pexels CDN URL or Supabase Storage URL
   tag?: string;       // optional badge: 'Best Seller' | 'New' | 'Premium'
   description: string;
+  isFeatured?: boolean; // admin-controlled: true = shown in Best Selling section
 }
 
 export interface Category {

@@ -33,6 +33,7 @@ function mapProduct(row: Record<string, unknown>): Product {
     image:         row.image as string,
     tag:           (row.tag as string) ?? undefined,
     description:   row.description as string,
+    isFeatured:    Boolean(row.is_featured),
   };
 }
 

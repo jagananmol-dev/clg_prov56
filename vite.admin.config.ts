@@ -19,6 +19,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  cacheDir: 'node_modules/.vite-admin',
   // Use the admin-specific HTML entry point
   root: '.',
   build: {

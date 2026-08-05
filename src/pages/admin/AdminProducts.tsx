@@ -242,7 +242,7 @@ export default function AdminProducts() {
                 {field('original_price', 'Original Price (₹)', 'number', { min: 1 })}
               </div>
 
-              {/* Image — file upload OR URL paste */}
+              {/* Image — file upload */}
               <div>
                 <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Product Image</label>
 
@@ -252,24 +252,15 @@ export default function AdminProducts() {
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     disabled={uploading}
-                    className="flex items-center gap-1.5 bg-[#FAF7F2] border border-[#E8DDD0] text-[#5A5A5A] px-3 py-2 rounded-xl text-xs font-medium hover:bg-[#F0E8DC] disabled:opacity-60"
+                    className="flex w-full justify-center items-center gap-2 bg-[#FAF7F2] border-2 border-dashed border-[#E8DDD0] text-[#5A5A5A] px-3 py-4 rounded-xl text-sm font-medium hover:bg-[#F0E8DC] disabled:opacity-60 transition-colors"
                   >
-                    <Upload size={13} />
-                    {uploading ? 'Uploading…' : 'Upload from computer'}
+                    <Upload size={16} />
+                    {uploading ? 'Uploading...' : 'Upload Image'}
                   </button>
-                  <span className="text-xs text-[#8A8A8A] self-center">or paste URL below</span>
                 </div>
                 <input
                   ref={fileRef} type="file" accept="image/*" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
-                />
-
-                {/* URL input */}
-                <input
-                  type="url" value={form.image} required
-                  placeholder="https://drive.google.com/uc?export=view&id=…"
-                  onChange={e => { setForm(f => ({ ...f, image: e.target.value })); setImgPreview(e.target.value); }}
-                  className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
                 />
 
                 {/* Live preview */}
@@ -280,7 +271,7 @@ export default function AdminProducts() {
                       className="w-16 h-16 rounded-xl object-cover border border-[#E8DDD0] bg-[#FAF7F2]"
                       onError={e => (e.currentTarget.style.display = 'none')}
                     />
-                    <span className="text-xs text-[#8A8A8A]">Preview</span>
+                    <span className="text-xs text-[#8A8A8A]">Image uploaded</span>
                   </div>
                 )}
                 {!imgPreview && (

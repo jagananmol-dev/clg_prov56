@@ -14,12 +14,13 @@ export default function AdminDashboard() {
   const { adminFetch } = useAdminAuth();
   const [stats,   setStats]   = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
-      adminFetch('/api/admin/products').then(r => r.json()),
-      adminFetch('/api/admin/orders').then(r => r.json()),
-      adminFetch('/api/admin/reviews').then(r => r.json()),
+      adminFetch('/api/admin/products').then(r => r.json()).catch(() => ({ products: [] })),
+      adminFetch('/api/admin/orders').then(r => r.json()).catch(() => ({ orders: [] })),
+      adminFetch('/api/admin/reviews').then(r => r.json()).catch(() => ({ reviews: [] })),
     ]).then(([p, o, r]) => {
       setStats({
         products:      p.products?.length ?? 0,
@@ -27,6 +28,8 @@ export default function AdminDashboard() {
         totalOrders:   o.orders?.length ?? 0,
         reviews:       r.reviews?.length ?? 0,
       });
+    }).catch(() => {
+      setError('Cannot reach the admin backend. Make sure it is running on port 4000.');
     }).finally(() => setLoading(false));
   }, [adminFetch]);
 
@@ -42,6 +45,12 @@ export default function AdminDashboard() {
       <div className="p-8">
         <h1 className="text-2xl font-bold text-[#1C1C1C] mb-1">Dashboard</h1>
         <p className="text-sm text-[#8A8A8A] mb-8">Welcome back, Admin.</p>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-600">
+            ⚠️ {error}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {cards.map(({ label, value, icon: Icon, color }) => (

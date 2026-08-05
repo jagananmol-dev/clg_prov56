@@ -6,6 +6,9 @@
  * at startup and throws if the key is a placeholder. Lazy init means the server
  * starts cleanly; the client is only created on the first actual DB call.
  *
+ * WHY ws: Node.js < 22 doesn't have native WebSocket. The 'ws' package provides
+ * a compatible WebSocket implementation for the Supabase Realtime client.
+ *
  * Usage in route handlers:
  *   import { getAdminDB } from '../lib/supabase';
  *   const { data, error } = await getAdminDB().from('products').select('*');
@@ -15,13 +18,14 @@
  *   Paste it into backend/.env  →  SUPABASE_SERVICE_ROLE_KEY=eyJ...
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { config } from '../config';
 
 let _client: SupabaseClient | null = null;
 
 /**
  * Returns the singleton Supabase admin client.
- * The client is created on first call, not at module import time.
+ * Created on first call — not at module import time — so startup never throws.
  */
 export function getAdminDB(): SupabaseClient {
   if (!_client) {
@@ -40,8 +44,13 @@ export function getAdminDB(): SupabaseClient {
       config.supabase.serviceRoleKey,
       {
         auth: {
-          persistSession:   false,  // server-side — no session storage
-          autoRefreshToken: false,  // JWTs are long-lived service_role keys
+          persistSession:   false,  // server-side — no session storage needed
+          autoRefreshToken: false,  // service_role keys don't expire
+        },
+        realtime: {
+          // Provide native WebSocket implementation for Node.js < 22
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          transport: ws as any,
         },
       }
     );

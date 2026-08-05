@@ -61,7 +61,7 @@ export default function Shop() {
     if (activeCategory !== 'all') list = list.filter(p => p.category === activeCategory);
     if (query) {
       const q = query.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
     }
     if (sortBy === 'price-low') list = [...list].sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') list = [...list].sort((a, b) => b.price - a.price);
@@ -91,6 +91,7 @@ export default function Shop() {
               setCategory={setCategory}
               priceRange={priceRange}
               setPriceRange={setPriceRange}
+              categories={categories}
             />
           </aside>
 
@@ -107,6 +108,7 @@ export default function Shop() {
                   setCategory={setCategory}
                   priceRange={priceRange}
                   setPriceRange={setPriceRange}
+                  categories={categories}
                 />
               </div>
             </div>
@@ -158,11 +160,13 @@ function FilterContent({
   setCategory,
   priceRange,
   setPriceRange,
+  categories,
 }: {
   activeCategory: string;
   setCategory: (c: string) => void;
   priceRange: number;
   setPriceRange: (n: number) => void;
+  categories: { id: string; name: string }[];
 }) {
   return (
     <div className="space-y-8">

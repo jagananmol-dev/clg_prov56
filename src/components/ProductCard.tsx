@@ -17,8 +17,8 @@ export default function ProductCard({ product }: { product: Product }) {
   const { addToCart, toggleWishlist, wishlist } = useCart();
   // Check if this product's ID exists in the persisted wishlist array
   const isWishlisted = wishlist.includes(product.id);
-  // Compute integer discount % for the badge (e.g. 25 → "-25%")
-  const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  const original = product.originalPrice || product.price;
+  const discount = original > product.price ? Math.round(((original - product.price) / original) * 100) : 0;
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-[#E8DDD0] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">

@@ -4,10 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --names \"frontend,backend\" --prefix-colors \"cyan,yellow\" \"vite\" \"npm run dev:backend\"",
-    "dev:frontend": "vite",
+    "dev": "concurrently --names \"store,admin,backend\" --prefix-colors \"cyan,magenta,yellow\" \"vite --port 3000\" \"vite --config vite.admin.config.ts --port 5173\" \"npm run dev:backend\"",
+    "dev:store":   "vite --port 3000",
+    "dev:admin":   "vite --config vite.admin.config.ts --port 5173",
     "dev:backend": "npm run dev --prefix backend",
     "build": "vite build",
+    "build:admin": "vite build --config vite.admin.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"

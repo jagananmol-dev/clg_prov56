@@ -18,7 +18,8 @@
  *   Paste it into backend/.env  →  SUPABASE_SERVICE_ROLE_KEY=eyJ...
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import ws from 'ws';
+// Use ws.WebSocket class — compatible with Node.js < 22 which has no native WebSocket
+import { WebSocket } from 'ws';
 import { config } from '../config';
 
 let _client: SupabaseClient | null = null;
@@ -48,9 +49,9 @@ export function getAdminDB(): SupabaseClient {
           autoRefreshToken: false,  // service_role keys don't expire
         },
         realtime: {
-          // Provide native WebSocket implementation for Node.js < 22
+          // Provide native WebSocket for Node.js < 22 (no native WebSocket)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          transport: ws as any,
+          transport: WebSocket as any,
         },
       }
     );

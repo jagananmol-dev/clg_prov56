@@ -2,7 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
-// https://vitejs.dev/config/
+// User-facing store — runs on http://localhost:3000
+// Admin portal runs separately via vite.admin.config.ts on http://localhost:5173
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -13,4 +14,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  server: {
+    port: 3000,
+    strictPort: true, // fail clearly if port is already in use
+  },
 });
+

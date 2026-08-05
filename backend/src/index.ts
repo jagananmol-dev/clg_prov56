@@ -35,9 +35,17 @@ const app = express();
 // ── Security headers ─────────────────────────────────────────────────────────
 app.use(helmet());
 
-// ── CORS — only the frontend origin is allowed ────────────────────────────────
+// ── CORS — only known frontend origins are allowed ───────────────────────────
+const allowedOrigins = config.server.frontendOrigin.split(',').map(o => o.trim());
 app.use(cors({
-  origin: config.server.frontendOrigin,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. same-origin, Postman) in dev
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

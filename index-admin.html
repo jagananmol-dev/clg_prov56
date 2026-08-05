@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/images/ChatGPT_Image_Jul_24,_2026,_03_17_51_PM copy.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Portal — The Dorm Store</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <script>
+      // Auto-redirect root path to admin login — this is an admin-only portal
+      if (window.location.pathname === '/' || window.location.pathname === '') {
+        window.history.replaceState({}, '', '/admin/login');
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

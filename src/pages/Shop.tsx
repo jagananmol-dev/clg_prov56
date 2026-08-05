@@ -64,7 +64,10 @@ export default function Shop() {
       list = list.filter(p => {
         const nameMatch = p.name.toLowerCase();
         const descMatch = (p.description || '').toLowerCase();
-        return searchTerms.every(term => nameMatch.includes(term) || descMatch.includes(term));
+        return searchTerms.every(term => {
+          const singular = term.endsWith('s') && term.length > 3 ? term.slice(0, -1) : term;
+          return nameMatch.includes(term) || descMatch.includes(term) || nameMatch.includes(singular) || descMatch.includes(singular);
+        });
       });
     }
     if (sortBy === 'price-low') list = [...list].sort((a, b) => a.price - b.price);
@@ -142,8 +145,29 @@ export default function Shop() {
             </div>
 
             {filtered.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-[#8A8A8A] text-lg">No products found. Try adjusting your filters.</p>
+              <div className="bg-white rounded-2xl border border-[#E8DDD0] p-8 md:p-12 text-center max-w-lg mx-auto mt-10 shadow-sm">
+                <div className="w-16 h-16 bg-[#F0EAE0] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#3D2B0E] mb-2">No exact matches found</h3>
+                <p className="text-[#5A5A5A] mb-8">
+                  {query 
+                    ? `We couldn't find any products matching "${query}".`
+                    : "We couldn't find any products matching your current filters."
+                  }
+                  <br className="hidden sm:block" /> Try checking out our full collection instead.
+                </p>
+                <button
+                  onClick={() => {
+                    setCategory('all');
+                    searchParams.delete('q');
+                    setSearchParams(searchParams);
+                    setPriceRange(2000);
+                  }}
+                  className="bg-[#3D2B0E] text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-[#2A1D09] transition-colors shadow-lg shadow-black/10"
+                >
+                  View All Products
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">

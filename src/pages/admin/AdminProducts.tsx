@@ -8,7 +8,7 @@
  *  - Delete product with confirmation dialog
  */
 import { useState, useEffect, FormEvent, useRef } from 'react';
-import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon as ImageIconIcon, Star } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
@@ -123,6 +123,16 @@ export default function AdminProducts() {
     if (res.ok) { setDeleteId(null); loadData(); }
   }
 
+  async function handleToggleFeatured(id: string, currentStatus: boolean) {
+    const res = await adminFetch(`/api/admin/products/${id}/featured`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_featured: !currentStatus }),
+    });
+    if (res.ok) {
+      loadData();
+    }
+  }
+
   const field = (key: keyof typeof EMPTY_FORM, label: string, type = 'text', extra?: object) => (
     <div>
       <label className="block text-xs font-medium text-[#5A5A5A] mb-1">{label}</label>
@@ -198,10 +208,17 @@ export default function AdminProducts() {
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button
-                        onClick={() => setDeleteId(p.id)}
-                        className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50"
+                        onClick={() => handleToggleFeatured(p.id, !!p.is_featured)}
+                        title={p.is_featured ? 'Remove from Best Sellers' : 'Mark as Best Seller'}
+                        className="text-[#8A8A8A] hover:text-amber-500 transition-colors mr-3"
                       >
-                        <Trash2 size={15} />
+                        <Star size={16} className={p.is_featured ? 'fill-amber-500 text-amber-500' : ''} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(p.id)}
+                        className="text-[#8A8A8A] hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>

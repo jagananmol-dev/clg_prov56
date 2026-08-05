@@ -88,3 +88,37 @@ productsRouter.delete('/:id', requireAdmin, async (req, res) => {
 
   res.json({ success: true, id });
 });
+
+// ── PATCH /api/admin/products/:id/featured ─────────────────────────────────
+// Toggle is_featured flag on an existing product
+productsRouter.patch('/:id/featured', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { is_featured } = req.body;
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    res.status(400).json({ error: 'Invalid product ID.' });
+    return;
+  }
+
+  if (typeof is_featured !== 'boolean') {
+    res.status(400).json({ error: 'is_featured must be a boolean.' });
+    return;
+  }
+
+  const { data, error } = await getAdminDB()
+    .from('products')
+    .update({ is_featured })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[PRODUCTS] Featured toggle error:', error.message);
+    res.status(500).json({ error: 'Failed to update product.' });
+    return;
+  }
+
+  console.log(`[PRODUCTS] ${data.name} → is_featured=${is_featured}`);
+  res.json({ product: data });
+});

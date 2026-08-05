@@ -31,7 +31,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 px-3 sm:px-6 pt-3">
       <div className="max-w-7xl mx-auto">
-        <div className="glass px-4 sm:px-6 py-3 flex items-center justify-between">
+        <div className="bg-[#3D2B0E] rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
             <Logo className="h-11 w-11 rounded-xl object-cover" />
@@ -61,7 +61,7 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="glass-btn rounded-full px-4 py-1.5 text-sm text-white placeholder-white/60 focus:outline-none w-40"
+                  className="bg-[#5A3F1A] rounded-full px-4 py-1.5 text-sm text-white placeholder-white/60 focus:outline-none w-40"
                 />
                 <button type="button" onClick={() => setSearchOpen(false)} className="text-white/90 hover:text-white p-1">
                   <X size={18} />
@@ -116,7 +116,7 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="glass mt-2 px-6 py-4 lg:hidden">
+          <div className="bg-[#3D2B0E] rounded-2xl mt-2 px-6 py-4 lg:hidden">
             <nav className="flex flex-col gap-3">
               {navLinks.map(link => (
                 <Link

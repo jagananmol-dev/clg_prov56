@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Star, Heart, ShoppingCart, Minus, Plus, ChevronRight, Truck, RefreshCw, Shield } from 'lucide-react';
-import { products } from '@/data/products';
+import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
 
@@ -11,8 +11,17 @@ export default function ProductDetail() {
   const { addToCart, toggleWishlist, wishlist } = useCart();
   const [qty, setQty] = useState(1);
 
-  const product = products.find(p => p.id === Number(id));
+  // Fetch single product and all products (for related grid) from Supabase
+  const { product, loading } = useProduct(id);
+  const { products: allProducts } = useProducts();
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+        <div className="h-8 w-8 rounded-full border-2 border-[#E8DDD0] border-t-[#7C5A2A] animate-spin" />
+      </div>
+    );
+  }
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
@@ -26,7 +35,8 @@ export default function ProductDetail() {
 
   const isWishlisted = wishlist.includes(product.id);
   const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
-  const related = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+  // Use live allProducts list for related items (same category, different ID)
+  const related = allProducts.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) addToCart(product);

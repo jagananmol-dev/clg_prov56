@@ -10,18 +10,22 @@
  *  - useMemo for filtering/sorting so the computation only
  *    re-runs when its dependencies actually change.
  *  - Desktop sidebar + mobile slide-in drawer for filters.
+ *  - Products fetched live from Supabase (admin can add/delete products).
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
-import { products, categories } from '@/data/products';
+import { useProducts } from '@/hooks/useProducts';
 import { useDebounce } from '@/hooks/useDebounce';
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('category') || 'all';
   const query = searchParams.get('q') || '';
+
+  // Live products from Supabase — reflects admin adds/deletes
+  const { products, categories, loading, error } = useProducts();
 
   const [sortBy, setSortBy] = useState('featured');
   const [priceRange, setPriceRange] = useState(2000);

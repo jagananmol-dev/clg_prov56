@@ -30,7 +30,8 @@ let _client: SupabaseClient | null = null;
  */
 export function getAdminDB(): SupabaseClient {
   if (!_client) {
-    const keyIsReal = config.supabase.serviceRoleKey.startsWith('eyJ');
+    const keyIsReal = config.supabase.serviceRoleKey.startsWith('eyJ') ||
+                      config.supabase.serviceRoleKey.startsWith('sb_secret_');
 
     if (!keyIsReal) {
       console.warn(

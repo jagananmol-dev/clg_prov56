@@ -50,8 +50,8 @@ function PageLoader() {
 function App() {
   return (
     <AdminAuthProvider>
-      <CartProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <CartProvider>
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
@@ -86,8 +86,8 @@ function App() {
               </Routes>
             </Suspense>
           </BrowserRouter>
-        </AuthProvider>
-      </CartProvider>
+        </CartProvider>
+      </AuthProvider>
     </AdminAuthProvider>
   );
 }

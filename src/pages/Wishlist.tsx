@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Trash2, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { products } from '@/data/products';
+import { useProducts } from '@/hooks/useProducts';
 import { Star } from 'lucide-react';
 
 export default function Wishlist() {
   const { wishlist, toggleWishlist, addToCart } = useCart();
+  const { products } = useProducts();
 
   // Resolve full product objects from the stored ID array
   const wishlisted = products.filter(p => wishlist.includes(p.id));

@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cream: #FAF7F2;
+  --tan: #C4A265;
+  --brown: #7C5A2A;
+  --dark-brown: #3D2B0E;
+  --light-tan: #E8DDD0;
+  --card-bg: #FFFFFF;
+  --text-dark: #1C1C1C;
+  --text-mid: #5A5A5A;
+  --text-light: #8A8A8A;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--cream);
+  color: var(--text-dark);
+}
+
+.font-display {
+  font-family: 'Playfair Display', serif;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.no-transition * {
+  transition: none !important;
+}
+
+/* Liquid glass — navigation bar */
+.glass {
+  border-radius: 28px;
+  background: linear-gradient(180deg,
+    rgba(14, 14, 22, 0.18), rgba(14, 14, 22, 0.32));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -8px 20px rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.13);
+}
+
+/* Liquid glass — buttons (no fixed radius so pill shape is preserved) */
+.glass-btn {
+  background: linear-gradient(180deg,
+    rgba(14, 14, 22, 0.22), rgba(14, 14, 22, 0.40));
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.38),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -6px 16px rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.glass-btn:hover {
+  background: linear-gradient(180deg,
+    rgba(14, 14, 22, 0.30), rgba(14, 14, 22, 0.50));
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -6px 16px rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.20);
+}

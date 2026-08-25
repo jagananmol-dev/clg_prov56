@@ -491,7 +491,7 @@ export default function AdminProducts() {
                   className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40 resize-none"
                 />
                 <p className="text-[11px] text-[#8A8A8A] mt-1">
-                  Press Enter to start a new paragraph — it shows as a separate line on the product page.
+                  Enter for a line break within a paragraph. Leave a blank line (Enter twice) to start a new paragraph with spacing on the product page.
                 </p>
               </div>
 

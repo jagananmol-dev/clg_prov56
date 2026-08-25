@@ -9,7 +9,7 @@
  *  - Delete product with confirmation dialog
  */
 import { useState, useEffect, FormEvent, useRef } from 'react';
-import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon, Star } from 'lucide-react';
+import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon, Star, Pencil } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
@@ -40,6 +40,7 @@ export default function AdminProducts() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [showForm,   setShowForm]   = useState(false);
+  const [editingId,  setEditingId]  = useState<string | null>(null);
   const [form,       setForm]       = useState(EMPTY_FORM);
   const [saving,     setSaving]     = useState(false);
   const [formError,  setFormError]  = useState<string | null>(null);
@@ -99,14 +100,35 @@ export default function AdminProducts() {
     setImgPreview('');
     setImgUrl('');
     setFormError(null);
+    setEditingId(null);
   }
 
-  async function handleAdd(e: FormEvent) {
+  /** Open the slide-in panel pre-filled with an existing product's data,
+   * so every field — name, category, prices, image, badge, description,
+   * featured flag — can be changed instead of deleting and re-adding. */
+  function openEditForm(p: Product) {
+    setForm({
+      name: p.name,
+      category_id: p.category_id,
+      price: String(p.price),
+      original_price: String(p.original_price),
+      tag: p.tag ?? '',
+      description: p.description,
+      is_featured: !!p.is_featured,
+    });
+    setImgUrl(p.image);
+    setImgPreview(p.image);
+    setFormError(null);
+    setEditingId(p.id);
+    setShowForm(true);
+  }
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
 
     if (!imgUrl) {
-      setFormError('Please upload a product image before adding.');
+      setFormError('Please upload a product image.');
       return;
     }
     if (!form.name.trim()) {
@@ -132,25 +154,29 @@ export default function AdminProducts() {
 
     setSaving(true);
 
-    const res = await adminFetch('/api/admin/products', {
-      method: 'POST',
-      body: JSON.stringify({
-        name:           form.name.trim(),
-        category_id:    form.category_id,
-        price,
-        original_price: originalPrice,
-        image:          imgUrl,
-        tag:            form.tag.trim() || null,
-        description:    form.description.trim(),
-        is_featured:    form.is_featured,
-      }),
-    });
+    const isEditing = !!editingId;
+    const res = await adminFetch(
+      isEditing ? `/api/admin/products/${editingId}` : '/api/admin/products',
+      {
+        method: isEditing ? 'PUT' : 'POST',
+        body: JSON.stringify({
+          name:           form.name.trim(),
+          category_id:    form.category_id,
+          price,
+          original_price: originalPrice,
+          image:          imgUrl,
+          tag:            form.tag.trim() || null,
+          description:    form.description.trim(),
+          is_featured:    form.is_featured,
+        }),
+      }
+    );
 
     const data = await res.json();
     setSaving(false);
 
     if (!res.ok) {
-      setFormError(data.details?.join(' · ') ?? data.error ?? 'Failed to add product.');
+      setFormError(data.details?.join(' · ') ?? data.error ?? `Failed to ${isEditing ? 'save' : 'add'} product.`);
       return;
     }
 
@@ -226,6 +252,13 @@ export default function AdminProducts() {
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button
+                        onClick={() => openEditForm(p)}
+                        title="Edit product"
+                        className="text-[#8A8A8A] hover:text-[#3D2B0E] transition-colors mr-3"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
                         onClick={() => handleToggleFeatured(p.id, !!p.is_featured)}
                         title={p.is_featured ? 'Remove from Best Sellers' : 'Mark as Best Seller'}
                         className="text-[#8A8A8A] hover:text-amber-500 transition-colors mr-3"
@@ -261,13 +294,13 @@ export default function AdminProducts() {
           {/* panel */}
           <div className="w-full max-w-md bg-white shadow-2xl overflow-y-auto flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-[#E8DDD0]">
-              <h2 className="font-semibold text-[#1C1C1C]">Add New Product</h2>
+              <h2 className="font-semibold text-[#1C1C1C]">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
               <button onClick={() => { setShowForm(false); resetForm(); }}>
                 <X size={18} className="text-[#5A5A5A]" />
               </button>
             </div>
 
-            <form onSubmit={handleAdd} className="p-6 space-y-4 flex-1">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 flex-1">
 
               {/* Error banner */}
               {formError && (
@@ -396,7 +429,7 @@ export default function AdminProducts() {
                 disabled={saving || uploading}
                 className="w-full bg-[#3D2B0E] text-white py-3 rounded-full text-sm font-medium hover:bg-[#5A3F1A] disabled:opacity-60 mt-2 transition-colors"
               >
-                {saving ? 'Saving…' : 'Add Product'}
+                {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Product'}
               </button>
             </form>
           </div>

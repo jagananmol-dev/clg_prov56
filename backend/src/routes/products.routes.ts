@@ -6,6 +6,7 @@
  *
  * GET    /api/admin/products        — list all products (with category name)
  * POST   /api/admin/products        — add a new product
+ * PUT    /api/admin/products/:id    — edit an existing product (all fields)
  * DELETE /api/admin/products/:id    — hard delete a product
  */
 import { Router } from 'express';
@@ -61,6 +62,42 @@ productsRouter.post('/', requireAdmin, validate(addProductSchema), async (req, r
   }
 
   res.status(201).json({ product: data });
+});
+
+// ── PUT /api/admin/products/:id ─────────────────────────────────────────────
+// Full edit of an existing product — every field the Add form collects
+// (name, category, price, original_price, image, tag, description,
+// is_featured) can be changed here, so backend staff aren't stuck deleting
+// and re-adding a product just to fix a typo or swap a photo.
+productsRouter.put('/:id', requireAdmin, validate(addProductSchema), async (req, res) => {
+  const { id } = req.params;
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    res.status(400).json({ error: 'Invalid product ID.' });
+    return;
+  }
+
+  const { data, error } = await getAdminDB()
+    .from('products')
+    .update(req.body)
+    .eq('id', id)
+    .select('*, categories(id, name)')
+    .single();
+
+  if (error) {
+    console.error('[PRODUCTS] Update error:', error.message);
+    res.status(500).json({ error: 'Failed to update product.' });
+    return;
+  }
+
+  if (!data) {
+    res.status(404).json({ error: 'Product not found.' });
+    return;
+  }
+
+  console.log(`[PRODUCTS] Updated ${data.name} (${id})`);
+  res.json({ product: data });
 });
 
 // ── DELETE /api/admin/products/:id ──────────────────────────────────────────

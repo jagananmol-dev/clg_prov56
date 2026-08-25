@@ -92,7 +92,7 @@ export default function ProductDetail() {
                   <Star key={i} size={14} className={i < Math.round(product.rating) ? 'fill-[#C4A265] text-[#C4A265]' : 'text-[#E8DDD0]'} />
                 ))}
               </div>
-              <span className="text-sm text-[#5A5A5A]">{product.rating} ({product.reviews} reviews)</span>
+              <span className="text-sm text-[#5A5A5A]">{product.rating}</span>
             </div>
 
             <div className="flex items-center gap-3 mb-6">

@@ -94,7 +94,6 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className="flex items-center gap-1 mt-1.5">
           <Star size={12} className="fill-[#C4A265] text-[#C4A265]" />
           <span className="text-xs font-medium text-[#5A5A5A]">{product.rating}</span>
-          <span className="text-xs text-[#8A8A8A]">({product.reviews})</span>
         </div>
 
         <div className="flex items-center gap-2 mt-2">

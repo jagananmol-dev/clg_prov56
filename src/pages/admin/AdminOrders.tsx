@@ -13,7 +13,7 @@ import AdminLayout from './AdminLayout';
 interface OrderItem { id: string; product_name: string; price: number; quantity: number; }
 interface Order {
   id: string; customer_name: string; customer_email: string;
-  total: number; status: string; created_at: string;
+  total: number; status: string; payment_method: string; created_at: string;
   order_items: OrderItem[];
 }
 
@@ -71,6 +71,7 @@ export default function AdminOrders() {
                   <th className="px-5 py-3 text-left font-medium">Customer</th>
                   <th className="px-5 py-3 text-left font-medium">Date</th>
                   <th className="px-5 py-3 text-left font-medium">Total</th>
+                  <th className="px-5 py-3 text-left font-medium">Payment</th>
                   <th className="px-5 py-3 text-left font-medium">Status</th>
                   <th className="px-5 py-3 text-right font-medium">Actions</th>
                 </tr>
@@ -86,6 +87,13 @@ export default function AdminOrders() {
                       </td>
                       <td className="px-5 py-3 text-[#5A5A5A]">{new Date(order.created_at).toLocaleDateString('en-IN')}</td>
                       <td className="px-5 py-3 font-semibold text-[#3D2B0E]">₹{order.total}</td>
+                      <td className="px-5 py-3">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          order.payment_method === 'cod' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {order.payment_method === 'cod' ? 'Cash on Delivery' : 'Paid Online'}
+                        </span>
+                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -113,7 +121,7 @@ export default function AdminOrders() {
                     {/* Expanded order items */}
                     {expanded === order.id && (
                       <tr key={`${order.id}-items`}>
-                        <td colSpan={6} className="px-5 py-4 bg-[#FAF7F2]">
+                        <td colSpan={7} className="px-5 py-4 bg-[#FAF7F2]">
                           <p className="text-xs font-semibold text-[#5A5A5A] mb-2 uppercase tracking-wide">Order Items</p>
                           <div className="space-y-1.5">
                             {order.order_items.map(item => (

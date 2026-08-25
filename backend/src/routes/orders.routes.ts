@@ -27,6 +27,7 @@ ordersRouter.get('/', requireAdmin, async (_req, res) => {
       shipping_address,
       total,
       status,
+      payment_method,
       created_at,
       user_id,
       order_items (

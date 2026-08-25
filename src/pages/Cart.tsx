@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2, MapPin, Phone } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2, MapPin, Phone, CreditCard, Banknote } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +29,7 @@ export default function Cart() {
   const [phone, setPhone] = useState('');
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
 
   // Prefill the phone number from the profile captured at signup, so
   // returning customers don't have to retype it on every order. Still
@@ -44,6 +45,48 @@ export default function Cart() {
         if (data?.phone) setPhone(data.phone);
       });
   }, [user]);
+
+  // Persists the order (and its line items) to Supabase. For 'online' this
+  // runs after Razorpay confirms the charge; for 'cod' it runs immediately,
+  // since nothing is collected until the order arrives.
+  async function saveOrder(paymentId: string | null, method: 'online' | 'cod') {
+    if (!user) return;
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        customer_name: user.user_metadata?.full_name || 'Customer',
+        customer_email: user.email,
+        customer_phone: phone,
+        shipping_address: address,
+        total: totalPrice,
+        status: method === 'cod' ? 'pending' : 'confirmed',
+        payment_id: paymentId,
+        payment_method: method,
+      })
+      .select('id')
+      .single();
+
+    if (orderError) throw orderError;
+
+    const orderItems = items.map(item => ({
+      order_id: order.id,
+      product_id: item.id,
+      product_name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) throw itemsError;
+
+    clearCart();
+    navigate('/account');
+  }
 
   async function handleCheckout() {
     if (!isAuthenticated || !user) {
@@ -61,6 +104,23 @@ export default function Cart() {
       return;
     }
 
+    setError(null);
+
+    // Cash on Delivery — nothing to charge now, just record the order so
+    // the admin panel and the delivery agent know cash is due on arrival.
+    if (paymentMethod === 'cod') {
+      setIsCheckingOut(true);
+      try {
+        await saveOrder(null, 'cod');
+      } catch (err) {
+        console.error('COD order save error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to place your order. Please try again.');
+      } finally {
+        setIsCheckingOut(false);
+      }
+      return;
+    }
+
     if (!RAZORPAY_KEY) {
       console.error('VITE_RAZORPAY_KEY_ID is not set.');
       setError('Payments are not configured. Please contact support.');
@@ -68,7 +128,6 @@ export default function Cart() {
     }
 
     setIsCheckingOut(true);
-    setError(null);
 
     try {
       // Razorpay expects amount in paise (1 INR = 100 paise)
@@ -95,39 +154,7 @@ export default function Cart() {
         handler: async function (response: { razorpay_payment_id: string }) {
           // Payment succeeded — save order to Supabase
           try {
-            const { data: order, error: orderError } = await supabase
-              .from('orders')
-              .insert({
-                user_id: user.id,
-                customer_name: user.user_metadata?.full_name || 'Customer',
-                customer_email: user.email,
-                customer_phone: phone,
-                shipping_address: address,
-                total: totalPrice,
-                status: 'confirmed',
-                payment_id: response.razorpay_payment_id,
-              })
-              .select('id')
-              .single();
-
-            if (orderError) throw orderError;
-
-            const orderItems = items.map(item => ({
-              order_id: order.id,
-              product_id: item.id,
-              product_name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-            }));
-
-            const { error: itemsError } = await supabase
-              .from('order_items')
-              .insert(orderItems);
-
-            if (itemsError) throw itemsError;
-
-            clearCart();
-            navigate('/account');
+            await saveOrder(response.razorpay_payment_id, 'online');
           } catch (err) {
             console.error('Order save error:', err);
             setError('Payment succeeded but order save failed. Please contact support with payment ID: ' + response.razorpay_payment_id);
@@ -281,6 +308,41 @@ export default function Cart() {
                 )}
               </div>
 
+              {/* Payment Method */}
+              {isAuthenticated && (
+                <div className="mb-6 pb-6 border-b border-[#E8DDD0]">
+                  <h2 className="font-display text-lg font-bold text-[#3D2B0E] mb-4">Payment Method</h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('online')}
+                      className={`flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors ${
+                        paymentMethod === 'online'
+                          ? 'border-[#3D2B0E] bg-[#FAF7F2]'
+                          : 'border-[#E8DDD0] hover:border-[#C4A265]'
+                      }`}
+                    >
+                      <CreditCard size={20} className="text-[#3D2B0E]" />
+                      <span className="text-xs font-medium text-[#3D2B0E]">Pay Online</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Card / UPI / Wallet</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('cod')}
+                      className={`flex flex-col items-center gap-2 rounded-xl border p-4 text-center transition-colors ${
+                        paymentMethod === 'cod'
+                          ? 'border-[#3D2B0E] bg-[#FAF7F2]'
+                          : 'border-[#E8DDD0] hover:border-[#C4A265]'
+                      }`}
+                    >
+                      <Banknote size={20} className="text-[#3D2B0E]" />
+                      <span className="text-xs font-medium text-[#3D2B0E]">Cash on Delivery</span>
+                      <span className="text-[10px] text-[#8A8A8A]">Pay when it arrives</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Order Summary */}
               <h2 className="font-display text-xl font-bold text-[#3D2B0E] mb-4">Order Summary</h2>
               <div className="space-y-3 text-sm">
@@ -312,15 +374,23 @@ export default function Cart() {
                 }`}
               >
                 {isCheckingOut ? (
-                  <><Loader2 size={16} className="animate-spin" /> Processing...</>
+                  <><Loader2 size={16} className="animate-spin" /> {paymentMethod === 'cod' ? 'Placing Order...' : 'Processing...'}</>
+                ) : paymentMethod === 'cod' ? (
+                  <>Place Order — Pay ₹{totalPrice} on Delivery <ArrowRight size={16} /></>
                 ) : (
                   <>Pay ₹{totalPrice} <ArrowRight size={16} /></>
                 )}
               </button>
 
               <div className="mt-4 flex items-center justify-center gap-2">
-                <svg viewBox="0 0 24 24" width="16" height="16" className="text-[#8A8A8A]"><path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-                <p className="text-xs text-[#8A8A8A]">Secured by Razorpay · 100% safe payment</p>
+                {paymentMethod === 'cod' ? (
+                  <p className="text-xs text-[#8A8A8A]">Pay in cash to the delivery agent when your order arrives</p>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" width="16" height="16" className="text-[#8A8A8A]"><path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                    <p className="text-xs text-[#8A8A8A]">Secured by Razorpay · 100% safe payment</p>
+                  </>
+                )}
               </div>
             </div>
           </div>

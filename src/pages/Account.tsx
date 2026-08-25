@@ -9,6 +9,7 @@ interface OrderRow {
   created_at: string;
   total: number;
   status: string;
+  payment_method: string;
 }
 
 export default function Account() {
@@ -50,7 +51,7 @@ export default function Account() {
 
     supabase
       .from('orders')
-      .select('id, created_at, total, status')
+      .select('id, created_at, total, status, payment_method')
       .eq('user_id', user.id)            // UUID-based: only this user's orders
       .order('created_at', { ascending: false })
       .abortSignal(controller.signal)
@@ -222,6 +223,7 @@ export default function Account() {
                   <th className="px-4 py-3 font-medium">Order</th>
                   <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Total</th>
+                  <th className="px-4 py-3 font-medium">Payment</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
@@ -233,6 +235,9 @@ export default function Account() {
                       {new Date(o.created_at).toLocaleDateString('en-IN')}
                     </td>
                     <td className="px-4 py-3 text-[#1C1C1C]">₹{o.total}</td>
+                    <td className="px-4 py-3 text-[#5A5A5A]">
+                      {o.payment_method === 'cod' ? 'Cash on Delivery' : 'Paid Online'}
+                    </td>
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-[#E8DDD0] px-2.5 py-1 text-xs text-[#3D2B0E]">
                         {o.status}

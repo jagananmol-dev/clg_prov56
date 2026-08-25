@@ -2,7 +2,7 @@ import { Truck, RefreshCw, Lock, Headphones } from 'lucide-react';
 
 const features = [
   { icon: Truck, title: 'Free Delivery', desc: 'On all orders' },
-  { icon: RefreshCw, title: 'Easy Returns', desc: '7-day return policy' },
+  { icon: RefreshCw, title: 'Easy Returns', desc: 'Same-day return policy' },
   { icon: Lock, title: 'Secure Payment', desc: '100% protected checkout' },
   { icon: Headphones, title: '24/7 Support', desc: 'Dedicated student care' },
 ];

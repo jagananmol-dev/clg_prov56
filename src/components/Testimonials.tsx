@@ -26,7 +26,7 @@ const fallbackTestimonials: TestimonialItem[] = [
     id: 'fallback-3',
     name: 'Rahul Verma',
     role: 'B.Com, Christ University',
-    text: 'Got my backpack and pencil case here. Great quality for the price. The 7-day return policy gave me peace of mind.',
+    text: 'Got my backpack and pencil case here. Great quality for the price. The same-day return policy gave me peace of mind.',
   },
 ];
 

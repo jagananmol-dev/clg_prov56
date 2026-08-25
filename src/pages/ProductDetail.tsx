@@ -124,7 +124,7 @@ export default function ProductDetail() {
             <div className="grid grid-cols-3 gap-3 pt-6 border-t border-[#E8DDD0]">
               {[
                 { icon: Truck, label: 'Free Delivery', sub: 'On all orders' },
-                { icon: RefreshCw, label: '7-Day Returns', sub: 'Easy process' },
+                { icon: RefreshCw, label: 'Same-Day Returns', sub: 'Easy process' },
                 { icon: Shield, label: 'Secure Payment', sub: 'Protected' },
               ].map(b => (
                 <div key={b.label} className="text-center">

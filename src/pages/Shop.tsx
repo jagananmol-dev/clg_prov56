@@ -7,6 +7,9 @@
  *    read from the URL so filters are shareable and bookmarkable.
  *  - Debounced price range slider (300ms) to avoid expensive
  *    re-renders on every pixel of slider movement.
+ *  - Fuzzy, typo-tolerant, relevance-ranked search via Fuse.js — see
+ *    the `fuse` useMemo below for why this beats plain substring
+ *    matching at this catalog's scale.
  *  - useMemo for filtering/sorting so the computation only
  *    re-runs when its dependencies actually change.
  *  - Desktop sidebar + mobile slide-in drawer for filters.
@@ -14,6 +17,7 @@
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import Fuse from 'fuse.js';
 import { SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import { useProducts } from '@/hooks/useProducts';
@@ -49,32 +53,55 @@ export default function Shop() {
     setPriceRange(2000);
   }, [activeCategory, query]);
 
+  // Fuzzy search index — rebuilt only when the product list itself changes,
+  // not on every keystroke. Weighted so a match in the name counts for a lot
+  // more than one buried in the description, with tag/category as a light
+  // tiebreaker. `threshold` controls fuzziness (0 = exact, 1 = match almost
+  // anything); 0.2 was tuned against the real catalog — loose enough to
+  // survive typos ("noteboook", "pancil" -> pencil, "watrcolor") but tight
+  // enough that short common words like "pen" don't drag in unrelated
+  // products (a looser 0.35 was pulling "Leather Desk Organizer" into a
+  // "pen" search purely on incidental edit-distance noise).
+  const fuse = useMemo(() => new Fuse(products, {
+    keys: [
+      { name: 'name', weight: 0.5 },
+      { name: 'tag', weight: 0.2 },
+      { name: 'category', weight: 0.15 },
+      { name: 'description', weight: 0.15 },
+    ],
+    threshold: 0.2,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+  }), [products]);
+
   /**
    * Filtering pipeline (all client-side, no Supabase call needed):
    * 1. Price ≤ debouncedPrice
    * 2. Category match (skipped when activeCategory === 'all')
-   * 3. Search query match on name OR description
-   * 4. Sort: featured (insertion order) | price-low | price-high | rating
+   * 3. Search query — fuzzy-matched and relevance-ranked via Fuse
+   * 4. Sort: featured (relevance when searching, else insertion order) |
+   *    price-low | price-high | rating
    */
   const filtered = useMemo(() => {
     let list = products.filter(p => p.price <= debouncedPrice);
     if (activeCategory !== 'all') list = list.filter(p => p.category === activeCategory);
-    if (query) {
-      const searchTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
-      list = list.filter(p => {
-        const nameMatch = p.name.toLowerCase();
-        const descMatch = (p.description || '').toLowerCase();
-        return searchTerms.every(term => {
-          const singular = term.endsWith('s') && term.length > 3 ? term.slice(0, -1) : term;
-          return nameMatch.includes(term) || descMatch.includes(term) || nameMatch.includes(singular) || descMatch.includes(singular);
-        });
-      });
+
+    if (query.trim()) {
+      const results = fuse.search(query.trim()); // best match first
+      const rank = new Map(results.map((r, i) => [r.item.id, i]));
+      list = list.filter(p => rank.has(p.id));
+      // Only impose relevance order when the user hasn't picked an explicit
+      // sort — price-low/high and rating below still take priority.
+      if (sortBy === 'featured') {
+        list = [...list].sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
+      }
     }
+
     if (sortBy === 'price-low') list = [...list].sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') list = [...list].sort((a, b) => b.price - a.price);
     if (sortBy === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [products, activeCategory, query, debouncedPrice, sortBy]);
+  }, [products, activeCategory, query, debouncedPrice, sortBy, fuse]);
 
   return (
     <div className="bg-[#FAF7F2] min-h-screen">

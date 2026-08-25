@@ -18,6 +18,12 @@ interface Thought {
   approved_at: string | null;
 }
 
+const STATUS_BADGE: Record<Thought['status'], string> = {
+  pending:  'bg-[#E8DDD0] text-[#7C5A2A]',
+  approved: 'bg-emerald-100 text-emerald-700',
+  rejected: 'bg-amber-100 text-amber-800',
+};
+
 export default function AdminThoughts() {
   const { adminFetch } = useAdminAuth();
   const [thoughts, setThoughts] = useState<Thought[]>([]);
@@ -73,7 +79,7 @@ export default function AdminThoughts() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <span className="rounded-full bg-[#E8DDD0] px-3 py-1 text-xs font-semibold text-[#7C5A2A]">
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_BADGE[thought.status]}`}>
                         {thought.status}
                       </span>
                       <span className="text-xs text-[#8A8A8A]">
@@ -90,16 +96,24 @@ export default function AdminThoughts() {
                     <button
                       onClick={() => updateStatus(thought.id, 'approved')}
                       disabled={actionId === thought.id}
-                      className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 transition-colors ${
+                        thought.status === 'approved'
+                          ? 'bg-emerald-700 hover:bg-emerald-800'
+                          : 'bg-emerald-500 hover:bg-emerald-600'
+                      }`}
                     >
-                      <CheckCircle2 size={16} /> Approve
+                      <CheckCircle2 size={16} /> {thought.status === 'approved' ? 'Approved' : 'Approve'}
                     </button>
                     <button
                       onClick={() => updateStatus(thought.id, 'rejected')}
                       disabled={actionId === thought.id}
-                      className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-[#7C5A2A] hover:bg-amber-200 disabled:opacity-50"
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 transition-colors ${
+                        thought.status === 'rejected'
+                          ? 'bg-amber-600 text-white hover:bg-amber-700'
+                          : 'bg-amber-100 text-[#7C5A2A] hover:bg-amber-200'
+                      }`}
                     >
-                      <XCircle size={16} /> Reject
+                      <XCircle size={16} /> {thought.status === 'rejected' ? 'Rejected' : 'Reject'}
                     </button>
                     <button
                       onClick={() => handleDelete(thought.id)}

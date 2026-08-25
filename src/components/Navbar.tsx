@@ -61,7 +61,7 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="bg-[#5A3F1A] rounded-full px-4 py-1.5 text-sm text-white placeholder-white/60 focus:outline-none w-40"
+                  className="bg-[#5A3F1A] rounded-full px-4 py-1.5 text-sm text-white placeholder-white/60 focus:outline-none w-28 sm:w-40"
                 />
                 <button type="button" onClick={() => setSearchOpen(false)} className="text-white/90 hover:text-white p-1">
                   <X size={18} />
@@ -114,20 +114,43 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu — also carries Wishlist + Account, which are hidden
+            from the top bar below `sm` to keep it from overflowing. Without
+            these here, phone users would have no way to reach either page. */}
         {menuOpen && (
           <div className="bg-[#3D2B0E] rounded-2xl mt-2 px-6 py-4 lg:hidden">
-            <nav className="flex flex-col gap-3">
+            <nav className="flex flex-col gap-1">
               {navLinks.map(link => (
                 <Link
                   key={link.label}
                   to={link.to}
                   onClick={() => setMenuOpen(false)}
-                  className="text-sm font-medium text-white/90 hover:text-white py-1"
+                  className="text-sm font-medium text-white/90 hover:text-white py-2.5"
                 >
                   {link.label}
                 </Link>
               ))}
+              <Link
+                to="/wishlist"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center justify-between text-sm font-medium text-white/90 hover:text-white py-2.5"
+              >
+                <span className="flex items-center gap-2">
+                  <Heart size={16} className={wishlist.length > 0 ? 'fill-rose-400 text-rose-400' : ''} />
+                  Wishlist
+                </span>
+                {wishlist.length > 0 && (
+                  <span className="text-xs text-[#C4A265] font-semibold">{wishlist.length}</span>
+                )}
+              </Link>
+              <Link
+                to={user ? '/account' : '/login'}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white py-2.5"
+              >
+                <User size={16} />
+                {user ? 'My Account' : 'Log In'}
+              </Link>
             </nav>
           </div>
         )}

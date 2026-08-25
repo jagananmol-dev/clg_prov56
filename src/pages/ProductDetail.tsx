@@ -96,7 +96,7 @@ export default function ProductDetail() {
             <p className="text-sm text-[#5A5A5A] leading-relaxed mb-7">{product.description}</p>
 
             {/* Quantity + Add */}
-            <div className="flex items-center gap-4 mb-5">
+            <div className="flex flex-wrap items-center gap-4 mb-5">
               <div className="flex items-center border border-[#E8DDD0] rounded-full">
                 <button onClick={() => setQty(q => Math.max(1, q - 1))} className="p-3 text-[#3D2B0E] hover:text-[#7C5A2A]">
                   <Minus size={16} />
@@ -108,7 +108,7 @@ export default function ProductDetail() {
               </div>
               <button
                 onClick={handleAdd}
-                className="bg-blue-600 hover:bg-blue-700 transition-colors flex-1 text-white py-3.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
+                className="bg-blue-600 hover:bg-blue-700 transition-colors flex-1 min-w-[140px] text-white py-3.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
               >
                 <ShoppingCart size={16} /> Add to Cart
               </button>

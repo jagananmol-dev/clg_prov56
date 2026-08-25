@@ -216,8 +216,8 @@ export default function Account() {
             You haven't placed any orders yet.
           </p>
         ) : (
-          <div className="mt-4 overflow-hidden rounded-xl border border-[#E8DDD0]">
-            <table className="w-full text-sm">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-[#E8DDD0]">
+            <table className="w-full min-w-[520px] text-sm">
               <thead className="bg-[#FAF7F2] text-left text-xs uppercase tracking-wide text-[#5A5A5A]">
                 <tr>
                   <th className="px-4 py-3 font-medium">Order</th>

@@ -194,8 +194,8 @@ export default function AdminProducts() {
         {loading ? (
           <p className="text-sm text-[#8A8A8A]">Loading products…</p>
         ) : (
-          <div className="bg-white rounded-2xl border border-[#E8DDD0] overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-2xl border border-[#E8DDD0] overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-[#FAF7F2] text-xs uppercase tracking-wide text-[#5A5A5A]">
                 <tr>
                   <th className="px-5 py-3 text-left font-medium">Product</th>

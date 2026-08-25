@@ -106,11 +106,15 @@ export default function ProductDetail() {
             {/* Description — boxed off as its own section rather than
                 flowing straight into the page. A blank line (Enter twice)
                 is what actually starts a new paragraph, getting its own
-                <p> with a touch of spacing below (space-y-0.5); a single Enter
-                inside what's meant to be one paragraph just stays a plain
-                line break at normal line-height — whitespace-pre-wrap
-                renders that \n without treating it as a paragraph change.
-                Multi-space runs are still preserved either way. */}
+                <p> with a touch of spacing below (space-y-0.5) — though
+                most descriptions are a single paragraph with no blank
+                line, so that gap rarely applies; leading-snug is what
+                actually controls the visible gap between wrapped/broken
+                lines within one paragraph. A single Enter inside what's
+                meant to be one paragraph just stays a plain line break —
+                whitespace-pre-wrap renders that \n without treating it as
+                a paragraph change. Multi-space runs are still preserved
+                either way. */}
             <div className="mb-7 rounded-2xl border border-[#E8DDD0] bg-white p-4">
               <p className="text-xs uppercase tracking-wide text-[#8A8A8A] mb-2">Description</p>
               <div className="space-y-0.5">
@@ -122,7 +126,7 @@ export default function ProductDetail() {
                     // existing spaces/breaks — a single long unbroken run
                     // (a long word, a URL) would still push past the box
                     // without this.
-                    <p key={i} className="font-sans text-base text-[#5A5A5A] leading-relaxed whitespace-pre-wrap break-words">
+                    <p key={i} className="font-sans text-base text-[#5A5A5A] leading-snug whitespace-pre-wrap break-words">
                       {paragraph}
                     </p>
                   ))}

@@ -73,8 +73,11 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Info */}
-          <div>
+          {/* Info — min-w-0 lets this grid column actually shrink to its
+              track width; a bare grid item defaults to min-width: auto,
+              which lets wide content (like the description below) push
+              the column wider than intended instead of wrapping inside it. */}
+          <div className="min-w-0">
             <p className="text-xs uppercase tracking-wide text-[#8A8A8A] mb-2">{product.category}</p>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-[#3D2B0E] mb-3">{product.name}</h1>
 
@@ -108,7 +111,11 @@ export default function ProductDetail() {
                   .split('\n')
                   .filter(line => line.trim() !== '')
                   .map((paragraph, i) => (
-                    <p key={i} className="font-sans text-base text-[#5A5A5A] leading-relaxed whitespace-pre-wrap">
+                    // break-words: whitespace-pre-wrap alone only wraps at
+                    // existing spaces/breaks — a single long unbroken run
+                    // (a long word, a URL) would still push past the box
+                    // without this.
+                    <p key={i} className="font-sans text-base text-[#5A5A5A] leading-relaxed whitespace-pre-wrap break-words">
                       {paragraph}
                     </p>
                   ))}

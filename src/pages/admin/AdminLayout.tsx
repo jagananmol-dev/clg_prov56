@@ -18,7 +18,7 @@ const NAV = [
   { to: '/admin/products',   icon: Package,         label: 'Products' },
   { to: '/admin/categories', icon: FolderKanban,    label: 'Categories' },
   { to: '/admin/orders',     icon: ShoppingBag,     label: 'Orders' },
-  { to: '/admin/reviews',    icon: MessageSquare,   label: 'Reviews' },
+  { to: '/admin/reviews',    icon: MessageSquare,   label: 'User Ratings' },
   { to: '/admin/thoughts',   icon: MessageSquare,   label: 'Thoughts' },
 ];
 

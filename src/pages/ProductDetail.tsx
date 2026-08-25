@@ -4,6 +4,7 @@ import { Star, Heart, ShoppingCart, Minus, Plus, ChevronRight, Truck, RefreshCw,
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
+import RateProduct from '@/components/RateProduct';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -36,8 +37,12 @@ export default function ProductDetail() {
   const isWishlisted = wishlist.includes(product.id);
   const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
   const outOfStock = product.isAvailable === false;
-  // Use live allProducts list for related items (same category, different ID)
-  const related = allProducts.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+  // Use live allProducts list for related items (same category, different ID),
+  // ordered by rating ascending as requested.
+  const related = allProducts
+    .filter(p => p.category === product.category && p.id !== product.id)
+    .sort((a, b) => a.rating - b.rating)
+    .slice(0, 4);
 
   const handleAdd = () => {
     if (outOfStock) return;
@@ -188,6 +193,12 @@ export default function ProductDetail() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Rate this product — a separate track from the admin-set rating
+            shown above; see RateProduct.tsx for why they're decoupled. */}
+        <div className="mt-12 max-w-xl">
+          <RateProduct productId={product.id} />
         </div>
 
         {/* Related */}

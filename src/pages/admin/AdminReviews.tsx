@@ -1,7 +1,16 @@
 /**
  * @file pages/admin/AdminReviews.tsx
- * @description Admin review/comment management at /admin/reviews.
- * Lists all reviews across all products. Admin can delete any review.
+ * @description "User Ratings" — every star rating + review shoppers have
+ * submitted, across all products, at /admin/reviews.
+ *
+ * This is the second of two separate rating tracks per product:
+ *  - Admin Rating (AdminProducts.tsx "Edit Product" form) — the number
+ *    actually shown to shoppers on cards and the product page.
+ *  - User Ratings (here) — what shoppers submit via RateProduct.tsx on
+ *    the product page. Recorded and manageable here, but does NOT feed
+ *    into the Admin Rating above (by design, for now).
+ *
+ * Admin can delete any review.
  */
 import { useState, useEffect } from 'react';
 import { Star, Trash2, MessageSquare } from 'lucide-react';
@@ -38,8 +47,10 @@ export default function AdminReviews() {
   return (
     <AdminLayout>
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-[#1C1C1C] mb-1">Reviews</h1>
-        <p className="text-sm text-[#8A8A8A] mb-6">{reviews.length} total reviews</p>
+        <h1 className="text-2xl font-bold text-[#1C1C1C] mb-1">User Ratings</h1>
+        <p className="text-sm text-[#8A8A8A] mb-6">
+          {reviews.length} submitted by shoppers · separate from each product's Admin Rating (set on its Edit Product form) and doesn't affect it
+        </p>
 
         {loading ? (
           <p className="text-sm text-[#8A8A8A]">Loading reviews…</p>

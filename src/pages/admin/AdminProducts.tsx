@@ -24,6 +24,7 @@ interface Product {
   category_id: string;
   price: number;
   original_price: number;
+  rating?: number;
   image: string;
   tag: string | null;
   description: string;
@@ -35,7 +36,7 @@ interface Product {
 interface Category { id: string; name: string; }
 
 const EMPTY_FORM = {
-  name: '', category_id: '', price: '', original_price: '',
+  name: '', category_id: '', price: '', original_price: '', rating: '0',
   tag: '', description: '', is_featured: false,
 };
 
@@ -120,6 +121,7 @@ export default function AdminProducts() {
       category_id: p.category_id,
       price: String(p.price),
       original_price: String(p.original_price),
+      rating: String(p.rating ?? 0),
       tag: p.tag ?? '',
       description: p.description,
       is_featured: !!p.is_featured,
@@ -160,6 +162,12 @@ export default function AdminProducts() {
       return;
     }
 
+    const rating = parseFloat(form.rating);
+    if (isNaN(rating) || rating < 0 || rating > 5) {
+      setFormError('Rating must be between 0 and 5.');
+      return;
+    }
+
     setSaving(true);
 
     const isEditing = !!editingId;
@@ -172,6 +180,7 @@ export default function AdminProducts() {
           category_id:    form.category_id,
           price,
           original_price: originalPrice,
+          rating,
           image:          imgUrl,
           tag:            form.tag.trim() || null,
           description:    form.description.trim(),
@@ -410,6 +419,23 @@ export default function AdminProducts() {
               <p className="text-[11px] text-[#8A8A8A] -mt-2">
                 Shoppers see the discounted price in bold with the original price struck through beside it.
               </p>
+
+              {/* Admin Rating — the number actually shown on cards & the
+                  product page. Kept separate from shopper-submitted star
+                  ratings (see "User Ratings" in the sidebar), which are
+                  recorded but don't feed into this value. */}
+              <div>
+                <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Admin Rating (★ shown to shoppers)</label>
+                <input
+                  type="number" required min={0} max={5} step={0.1} value={form.rating}
+                  onChange={e => setForm(f => ({ ...f, rating: e.target.value }))}
+                  placeholder="4.5"
+                  className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+                />
+                <p className="text-[11px] text-[#8A8A8A] mt-1">
+                  0–5. This is separate from ratings shoppers submit — see the "User Ratings" section for those.
+                </p>
+              </div>
 
               {/* Image Upload */}
               <div>

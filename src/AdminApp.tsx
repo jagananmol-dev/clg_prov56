@@ -16,6 +16,7 @@ import AdminRoute from '@/components/admin/AdminRoute';
 const AdminLogin     = lazy(() => import('@/pages/admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 const AdminProducts  = lazy(() => import('@/pages/admin/AdminProducts'));
+const AdminCategories = lazy(() => import('@/pages/admin/AdminCategories'));
 const AdminOrders    = lazy(() => import('@/pages/admin/AdminOrders'));
 const AdminReviews   = lazy(() => import('@/pages/admin/AdminReviews'));
 const AdminThoughts  = lazy(() => import('@/pages/admin/AdminThoughts'));
@@ -37,6 +38,7 @@ export default function AdminApp() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
+            <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />
             <Route path="/admin/orders"   element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="/admin/reviews"  element={<AdminRoute><AdminReviews /></AdminRoute>} />
             <Route path="/admin/thoughts" element={<AdminRoute><AdminThoughts /></AdminRoute>} />

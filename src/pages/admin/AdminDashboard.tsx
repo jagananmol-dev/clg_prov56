@@ -4,11 +4,11 @@
  * Shows live counts: total products, pending orders, total reviews.
  */
 import { useEffect, useState } from 'react';
-import { Package, ShoppingBag, MessageSquare, TrendingUp } from 'lucide-react';
+import { Package, FolderKanban, ShoppingBag, MessageSquare, TrendingUp } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
-interface Stats { products: number; pendingOrders: number; totalOrders: number; reviews: number; thoughts: number; }
+interface Stats { products: number; categories: number; pendingOrders: number; totalOrders: number; reviews: number; thoughts: number; }
 
 export default function AdminDashboard() {
   const { adminFetch } = useAdminAuth();
@@ -19,12 +19,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     Promise.all([
       adminFetch('/api/admin/products').then(r => r.json()).catch(() => ({ products: [] })),
+      adminFetch('/api/admin/categories').then(r => r.json()).catch(() => ({ categories: [] })),
       adminFetch('/api/admin/orders').then(r => r.json()).catch(() => ({ orders: [] })),
       adminFetch('/api/admin/reviews').then(r => r.json()).catch(() => ({ reviews: [] })),
       adminFetch('/api/admin/thoughts').then(r => r.json()).catch(() => ({ thoughts: [] })),
-    ]).then(([p, o, r, t]) => {
+    ]).then(([p, c, o, r, t]) => {
       setStats({
         products:      p.products?.length ?? 0,
+        categories:    c.categories?.length ?? 0,
         pendingOrders: (o.orders ?? []).filter((x: {status:string}) => x.status === 'pending').length,
         totalOrders:   o.orders?.length ?? 0,
         reviews:       r.reviews?.length ?? 0,
@@ -37,6 +39,7 @@ export default function AdminDashboard() {
 
   const cards = [
     { label: 'Total Products',  value: stats?.products,      icon: Package,       color: 'bg-blue-50 text-blue-600' },
+    { label: 'Categories',      value: stats?.categories,    icon: FolderKanban,  color: 'bg-indigo-50 text-indigo-600' },
     { label: 'Pending Orders',  value: stats?.pendingOrders, icon: ShoppingBag,   color: 'bg-amber-50 text-amber-600' },
     { label: 'Total Orders',    value: stats?.totalOrders,   icon: TrendingUp,    color: 'bg-green-50 text-green-600' },
     { label: 'Reviews',         value: stats?.reviews,       icon: MessageSquare, color: 'bg-purple-50 text-purple-600' },

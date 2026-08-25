@@ -13,7 +13,12 @@
  *  POST   /api/admin/login
  *  GET    /api/admin/products
  *  POST   /api/admin/products
+ *  PUT    /api/admin/products/:id
  *  DELETE /api/admin/products/:id
+ *  GET    /api/admin/categories
+ *  POST   /api/admin/categories
+ *  PUT    /api/admin/categories/:id
+ *  DELETE /api/admin/categories/:id
  *  GET    /api/admin/orders
  *  PATCH  /api/admin/orders/:id/cancel
  *  GET    /api/admin/reviews
@@ -28,6 +33,7 @@ import { config } from './config';
 import { auditLog } from './middleware/audit.middleware';
 import { authRouter } from './routes/auth.routes';
 import { productsRouter } from './routes/products.routes';
+import { categoriesRouter } from './routes/categories.routes';
 import { ordersRouter } from './routes/orders.routes';
 import { reviewsRouter } from './routes/reviews.routes';
 import { thoughtsRouter } from './routes/thoughts.routes';
@@ -75,8 +81,9 @@ const loginLimiter = rateLimit({
 // authRouter internally defines POST /login → mounts to /api/admin/login
 app.use('/api/admin/login',    loginLimiter);
 app.use('/api/admin',          authRouter);
-app.use('/api/admin/products', productsRouter);
-app.use('/api/admin/orders',   ordersRouter);
+app.use('/api/admin/products',   productsRouter);
+app.use('/api/admin/categories', categoriesRouter);
+app.use('/api/admin/orders',     ordersRouter);
 app.use('/api/admin/reviews',  reviewsRouter);
 app.use('/api/admin/thoughts', thoughtsRouter);
 // Upload route uses its own multer middleware (not express.json)

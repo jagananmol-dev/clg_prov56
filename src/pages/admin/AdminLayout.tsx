@@ -10,15 +10,16 @@
  */
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, MessageSquare, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, FolderKanban, ShoppingBag, MessageSquare, LogOut, Menu, X } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 
 const NAV = [
-  { to: '/admin',          icon: LayoutDashboard, label: 'Dashboard',   end: true },
-  { to: '/admin/products', icon: Package,         label: 'Products' },
-  { to: '/admin/orders',   icon: ShoppingBag,     label: 'Orders' },
-  { to: '/admin/reviews',  icon: MessageSquare,   label: 'Reviews' },
-  { to: '/admin/thoughts', icon: MessageSquare,   label: 'Thoughts' },
+  { to: '/admin',            icon: LayoutDashboard, label: 'Dashboard',   end: true },
+  { to: '/admin/products',   icon: Package,         label: 'Products' },
+  { to: '/admin/categories', icon: FolderKanban,    label: 'Categories' },
+  { to: '/admin/orders',     icon: ShoppingBag,     label: 'Orders' },
+  { to: '/admin/reviews',    icon: MessageSquare,   label: 'Reviews' },
+  { to: '/admin/thoughts',   icon: MessageSquare,   label: 'Thoughts' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -106,14 +106,14 @@ export default function ProductDetail() {
             {/* Description — boxed off as its own section rather than
                 flowing straight into the page. A blank line (Enter twice)
                 is what actually starts a new paragraph, getting its own
-                <p> with real spacing below (space-y-3); a single Enter
+                <p> with a bit of spacing below (space-y-1.5); a single Enter
                 inside what's meant to be one paragraph just stays a plain
                 line break at normal line-height — whitespace-pre-wrap
                 renders that \n without treating it as a paragraph change.
                 Multi-space runs are still preserved either way. */}
             <div className="mb-7 rounded-2xl border border-[#E8DDD0] bg-white p-4">
               <p className="text-xs uppercase tracking-wide text-[#8A8A8A] mb-2">Description</p>
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {product.description
                   .split(/\n{2,}/)
                   .filter(paragraph => paragraph.trim() !== '')

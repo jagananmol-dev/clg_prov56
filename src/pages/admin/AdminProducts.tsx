@@ -460,10 +460,13 @@ export default function AdminProducts() {
                 <textarea
                   required value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3}
+                  rows={4}
                   placeholder="Describe the product briefly..."
                   className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40 resize-none"
                 />
+                <p className="text-[11px] text-[#8A8A8A] mt-1">
+                  Press Enter to start a new paragraph — it shows as a separate line on the product page.
+                </p>
               </div>
 
               {/* Featured toggle */}

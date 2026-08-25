@@ -95,13 +95,25 @@ export default function ProductDetail() {
               )}
             </div>
 
-            {/* whitespace-pre-wrap: preserves line breaks and multi-space
-                runs exactly as the admin typed them, instead of HTML's
-                default collapse-to-one-paragraph behavior — still wraps
-                normally so a long line doesn't overflow the layout. */}
-            <p className="font-sans text-base text-[#5A5A5A] leading-relaxed mb-7 whitespace-pre-wrap">
-              {product.description}
-            </p>
+            {/* Description — boxed off as its own section rather than
+                flowing straight into the page. Each Enter the admin
+                pressed in the form becomes its own <p> with real spacing
+                between them (an actual new paragraph, not just a CSS line
+                break inside one block); whitespace-pre-wrap on each line
+                still preserves multi-space runs within it. */}
+            <div className="mb-7 rounded-2xl border border-[#E8DDD0] bg-white p-4">
+              <p className="text-xs uppercase tracking-wide text-[#8A8A8A] mb-2">Description</p>
+              <div className="space-y-3">
+                {product.description
+                  .split('\n')
+                  .filter(line => line.trim() !== '')
+                  .map((paragraph, i) => (
+                    <p key={i} className="font-sans text-base text-[#5A5A5A] leading-relaxed whitespace-pre-wrap">
+                      {paragraph}
+                    </p>
+                  ))}
+              </div>
+            </div>
 
             {/* Out of stock notice */}
             {outOfStock && (

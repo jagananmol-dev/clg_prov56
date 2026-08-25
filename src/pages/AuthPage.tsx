@@ -1,6 +1,6 @@
 import { useState, FormEvent, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 type Mode = 'login' | 'signup';
@@ -57,7 +57,7 @@ function sanitizeError(raw: string, isSignup: boolean): string {
   // Don't leak "email already registered" on login page
   if (msg.includes('email already') || msg.includes('already registered') || msg.includes('user already')) {
     return isSignup
-      ? 'An account with this email already exists. Try signing in.'
+      ? 'An account with this email already exists. Try logging in.'
       : 'Invalid email or password. Please check your details and try again.';
   }
 
@@ -85,6 +85,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 
   const [name, setName]                 = useState('');
   const [email, setEmail]               = useState('');
+  const [phone, setPhone]               = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
@@ -117,9 +118,11 @@ export default function AuthPage({ mode }: { mode: Mode }) {
     if (lockoutTimer.current) clearInterval(lockoutTimer.current);
   }, [mode]);
 
-  // Cleanup interval on unmount
+  // Cleanup intervals on unmount
   useEffect(() => {
-    return () => { if (lockoutTimer.current) clearInterval(lockoutTimer.current); };
+    return () => {
+      if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+    };
   }, []);
 
   function startLockout() {
@@ -136,47 +139,57 @@ export default function AuthPage({ mode }: { mode: Mode }) {
     }, 1000);
   }
 
-  async function handleSubmit(e: FormEvent) {
+  // ── Signup submit ─────────────────────────────
+  async function handleSignupSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError('Please enter a valid 10-digit Indian phone number.');
+      return;
+    }
+    if (strength === 'weak' || strength === 'empty') {
+      setError('Password is too weak. Use at least 8 characters with a mix of uppercase, numbers, and symbols.');
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { error: signupErr } = await signUp(email, password, name, phone);
+      if (signupErr) throw signupErr;
+      setSuccessMsg('Account created! Please check your inbox to confirm your email before logging in.');
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : 'Unknown error';
+      setError(sanitizeError(raw, true));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Login submit ───────────────────────────────────
+  async function handleLoginSubmit(e: FormEvent) {
     e.preventDefault();
     if (isLocked) return;
-
-    // Client-side validation (before hitting the network)
-    if (isSignup) {
-      if (!name.trim()) {
-        setError('Please enter your full name.');
-        return;
-      }
-      if (strength === 'weak' || strength === 'empty') {
-        setError('Password is too weak. Use at least 8 characters with a mix of uppercase, numbers, and symbols.');
-        return;
-      }
-    }
 
     setError(null);
     setSuccessMsg(null);
     setLoading(true);
 
     try {
-      if (isSignup) {
-        const { error: err } = await signUp(email, password, name);
-        if (err) throw err;
-        // Supabase requires email confirmation by default — tell the user
-        setSuccessMsg('Account created! Please check your inbox to confirm your email before signing in.');
-      } else {
-        const { error: err } = await signIn(email, password);
-        if (err) throw err;
-        navigate('/');
-      }
+      const { error: err } = await signIn(email, password);
+      if (err) throw err;
+      navigate('/');
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'Unknown error';
-      setError(sanitizeError(raw, isSignup));
+      setError(sanitizeError(raw, false));
 
-      if (!isSignup) {
-        // Increment failed attempt counter; lock out after MAX_ATTEMPTS
-        const next = failedAttempts + 1;
-        setFailedAttempts(next);
-        if (next >= MAX_ATTEMPTS) startLockout();
-      }
+      const next = failedAttempts + 1;
+      setFailedAttempts(next);
+      if (next >= MAX_ATTEMPTS) startLockout();
     } finally {
       setLoading(false);
     }
@@ -243,7 +256,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
             onClick={() => { setShowForgot(false); setForgotSent(false); }}
             className="mt-5 text-sm text-[#7C5A2A] hover:underline"
           >
-            ← Back to sign in
+            ← Back to login
           </button>
         </div>
       </div>
@@ -285,7 +298,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
             {isSignup ? 'Create your account' : 'Welcome back'}
           </h1>
           <p className="mt-2 text-sm text-[#5A5A5A]">
-            {isSignup ? 'Join us and start your stationery journey.' : 'Sign in to continue to your account.'}
+            {isSignup ? 'Join us and start your stationery journey.' : 'Log in to continue to your account.'}
           </p>
 
           {/* Success banner */}
@@ -321,7 +334,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 
           {/* Form — hidden after successful signup (user must check email) */}
           {!successMsg && (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            <form onSubmit={isSignup ? handleSignupSubmit : handleLoginSubmit} className="mt-6 space-y-5">
 
               {isSignup && (
                 <Field
@@ -356,6 +369,35 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                   />
                 }
               />
+
+              {/* Phone — captured at signup so it's already on file before any order,
+                  instead of being asked for again (and only stored per-order) at checkout. */}
+              {isSignup && (
+                <div>
+                  <Field
+                    label="Phone Number"
+                    icon={<Phone className="h-4 w-4" />}
+                    input={
+                      <div className="flex w-full items-center">
+                        <span className="text-sm font-medium text-[#5A5A5A] mr-2 select-none">+91</span>
+                        <input
+                          type="tel"
+                          required
+                          value={phone}
+                          onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="9876543210"
+                          maxLength={10}
+                          autoComplete="tel-national"
+                          className="w-full bg-transparent text-sm text-[#1C1C1C] placeholder:text-[#8A8A8A] focus:outline-none"
+                        />
+                      </div>
+                    }
+                  />
+                  {phone.length > 0 && !/^[6-9]\d{9}$/.test(phone) && (
+                    <p className="mt-1.5 px-1 text-xs text-red-500">Enter a valid 10-digit Indian mobile number</p>
+                  )}
+                </div>
+              )}
 
               {/* Password field + strength meter */}
               <div className="space-y-2">
@@ -431,8 +473,8 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                   : isLocked
                   ? `Try again in ${lockoutSeconds}s`
                   : isSignup
-                  ? 'Create account'
-                  : 'Sign in'}
+                  ? 'Create Account'
+                  : 'Log in'}
                 {!loading && !isLocked && (
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 )}
@@ -446,7 +488,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
               to={isSignup ? '/login' : '/signup'}
               className="font-medium text-[#3D2B0E] underline-offset-2 hover:underline"
             >
-              {isSignup ? 'Sign in' : 'Sign up'}
+              {isSignup ? 'Log in' : 'Sign up'}
             </Link>
           </p>
         </div>

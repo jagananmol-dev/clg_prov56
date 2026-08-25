@@ -12,6 +12,7 @@ const NAV = [
   { to: '/admin/products', icon: Package,         label: 'Products' },
   { to: '/admin/orders',   icon: ShoppingBag,     label: 'Orders' },
   { to: '/admin/reviews',  icon: MessageSquare,   label: 'Reviews' },
+  { to: '/admin/thoughts', icon: MessageSquare,   label: 'Thoughts' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

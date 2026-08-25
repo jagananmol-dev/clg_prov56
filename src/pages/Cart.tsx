@@ -1,9 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2, MapPin } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2, MapPin, Phone } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
+
+/** Razorpay type declarations (loaded via <script> in index.html) */
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: string, handler: () => void) => void;
+    };
+  }
+}
+
+// Razorpay key_id is a public identifier (like a Stripe publishable key) —
+// safe to ship to the client, but still env-driven so test/live keys can be
+// swapped per environment without a code change.
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID as string;
 
 export default function Cart() {
   const { items, updateQuantity, removeFromCart, totalPrice, totalItems, clearCart } = useCart();
@@ -15,8 +30,20 @@ export default function Cart() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shipping = totalPrice > 499 ? 0 : 49;
-  const grandTotal = totalPrice + shipping;
+  // Prefill the phone number from the profile captured at signup, so
+  // returning customers don't have to retype it on every order. Still
+  // editable — the field remains the source of truth for this order.
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('phone')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.phone) setPhone(data.phone);
+      });
+  }, [user]);
 
   async function handleCheckout() {
     if (!isAuthenticated || !user) {
@@ -25,7 +52,18 @@ export default function Cart() {
     }
 
     if (!address.trim()) {
-      setError('Please provide a shipping address.');
+      setError('Please provide a delivery address.');
+      return;
+    }
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError('Please enter a valid 10-digit Indian phone number.');
+      return;
+    }
+
+    if (!RAZORPAY_KEY) {
+      console.error('VITE_RAZORPAY_KEY_ID is not set.');
+      setError('Payments are not configured. Please contact support.');
       return;
     }
 
@@ -33,45 +71,88 @@ export default function Cart() {
     setError(null);
 
     try {
-      // 1. Create the Order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          customer_name: user.user_metadata?.full_name || 'Customer',
-          customer_email: user.email,
-          customer_phone: phone,
-          shipping_address: address,
-          total: grandTotal,
-          status: 'pending'
-        })
-        .select('id')
-        .single();
+      // Razorpay expects amount in paise (1 INR = 100 paise)
+      const amountInPaise = Math.round(totalPrice * 100);
 
-      if (orderError) throw orderError;
+      const options: Record<string, unknown> = {
+        key: RAZORPAY_KEY,
+        amount: amountInPaise,
+        currency: 'INR',
+        name: 'The Dorm Store',
+        description: `Order — ${totalItems} item${totalItems > 1 ? 's' : ''}`,
+        image: '/images/ChatGPT_Image_Jul_24,_2026,_03_17_51_PM copy.png',
+        prefill: {
+          name: user.user_metadata?.full_name || '',
+          email: user.email || '',
+          contact: phone || '',
+        },
+        notes: {
+          address: address,
+        },
+        theme: {
+          color: '#3D2B0E',
+        },
+        handler: async function (response: { razorpay_payment_id: string }) {
+          // Payment succeeded — save order to Supabase
+          try {
+            const { data: order, error: orderError } = await supabase
+              .from('orders')
+              .insert({
+                user_id: user.id,
+                customer_name: user.user_metadata?.full_name || 'Customer',
+                customer_email: user.email,
+                customer_phone: phone,
+                shipping_address: address,
+                total: totalPrice,
+                status: 'confirmed',
+                payment_id: response.razorpay_payment_id,
+              })
+              .select('id')
+              .single();
 
-      // 2. Create the Order Items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        product_name: item.name,
-        price: item.price,
-        quantity: item.quantity
-      }));
+            if (orderError) throw orderError;
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
+            const orderItems = items.map(item => ({
+              order_id: order.id,
+              product_id: item.id,
+              product_name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+            }));
 
-      if (itemsError) throw itemsError;
+            const { error: itemsError } = await supabase
+              .from('order_items')
+              .insert(orderItems);
 
-      // 3. Cleanup & Redirect
-      clearCart();
-      navigate('/account');
-    } catch (err: any) {
+            if (itemsError) throw itemsError;
+
+            clearCart();
+            navigate('/account');
+          } catch (err) {
+            console.error('Order save error:', err);
+            setError('Payment succeeded but order save failed. Please contact support with payment ID: ' + response.razorpay_payment_id);
+          } finally {
+            setIsCheckingOut(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsCheckingOut(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+
+      rzp.on('payment.failed', function () {
+        setError('Payment failed. Please try again.');
+        setIsCheckingOut(false);
+      });
+
+      rzp.open();
+    } catch (err) {
       console.error('Checkout error:', err);
-      setError(err.message || 'Failed to place order. Please try again.');
-    } finally {
+      setError(err instanceof Error ? err.message : 'Failed to initiate payment. Please try again.');
       setIsCheckingOut(false);
     }
   }
@@ -150,17 +231,17 @@ export default function Cart() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl border border-[#E8DDD0] p-6 sticky top-24">
               
-              {/* Shipping Details */}
+              {/* Delivery Details */}
               <div className="mb-6 pb-6 border-b border-[#E8DDD0]">
                 <h2 className="font-display text-lg font-bold text-[#3D2B0E] mb-4 flex items-center gap-2">
-                  <MapPin size={18} /> Shipping Details
+                  <MapPin size={18} /> Delivery Details
                 </h2>
                 
                 {!isAuthenticated ? (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="text-sm text-amber-800 mb-3">You need to sign in to place an order.</p>
+                    <p className="text-sm text-amber-800 mb-3">You need to log in to place an order.</p>
                     <Link to="/login?redirect=/cart" className="block w-full text-center bg-amber-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-amber-700">
-                      Sign In to Checkout
+                      Log In to Checkout
                     </Link>
                   </div>
                 ) : (
@@ -176,14 +257,25 @@ export default function Cart() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Phone Number (optional)</label>
-                      <input 
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="For delivery updates"
-                        className="w-full bg-[#FAF7F2] border border-[#E8DDD0] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[#C4A265]"
-                      />
+                      <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Phone Number *</label>
+                      <div className="flex items-center bg-[#FAF7F2] border border-[#E8DDD0] rounded-xl px-4 py-2">
+                        <span className="text-sm font-medium text-[#5A5A5A] mr-2 select-none">+91</span>
+                        <input 
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setPhone(val);
+                          }}
+                          placeholder="9876543210"
+                          maxLength={10}
+                          className="w-full bg-transparent text-sm focus:outline-none"
+                        />
+                        <Phone size={16} className="text-[#8A8A8A] flex-shrink-0" />
+                      </div>
+                      {phone && !/^[6-9]\d{9}$/.test(phone) && (
+                        <p className="text-xs text-red-500 mt-1">Enter a valid 10-digit Indian mobile number</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -193,19 +285,16 @@ export default function Cart() {
               <h2 className="font-display text-xl font-bold text-[#3D2B0E] mb-4">Order Summary</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between text-[#5A5A5A]">
-                  <span>Subtotal</span>
+                  <span>Subtotal ({totalItems} item{totalItems > 1 ? 's' : ''})</span>
                   <span className="font-medium text-[#3D2B0E]">₹{totalPrice}</span>
                 </div>
                 <div className="flex justify-between text-[#5A5A5A]">
-                  <span>Shipping</span>
-                  <span className="font-medium text-[#3D2B0E]">{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
+                  <span>Delivery</span>
+                  <span className="font-medium text-green-600">FREE</span>
                 </div>
-                {shipping === 0 && (
-                  <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">You qualified for free shipping!</p>
-                )}
                 <div className="border-t border-[#E8DDD0] pt-3 flex justify-between items-center">
                   <span className="font-semibold text-[#3D2B0E]">Total</span>
-                  <span className="font-bold text-xl text-[#3D2B0E]">₹{grandTotal}</span>
+                  <span className="font-bold text-xl text-[#3D2B0E]">₹{totalPrice}</span>
                 </div>
               </div>
 
@@ -215,9 +304,9 @@ export default function Cart() {
 
               <button 
                 onClick={handleCheckout}
-                disabled={!isAuthenticated || isCheckingOut || !address.trim()}
+                disabled={!isAuthenticated || isCheckingOut || !address.trim() || !/^[6-9]\d{9}$/.test(phone)}
                 className={`w-full py-3.5 rounded-full text-sm font-medium mt-5 flex items-center justify-center gap-2 transition-all ${
-                  (!isAuthenticated || !address.trim())
+                  (!isAuthenticated || !address.trim() || !/^[6-9]\d{9}$/.test(phone))
                     ? 'bg-[#E8DDD0] text-[#8A8A8A] cursor-not-allowed'
                     : 'bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-lg hover:shadow-xl'
                 }`}
@@ -225,11 +314,14 @@ export default function Cart() {
                 {isCheckingOut ? (
                   <><Loader2 size={16} className="animate-spin" /> Processing...</>
                 ) : (
-                  <>Place Order <ArrowRight size={16} /></>
+                  <>Pay ₹{totalPrice} <ArrowRight size={16} /></>
                 )}
               </button>
 
-              <p className="text-xs text-[#8A8A8A] text-center mt-4">Secure checkout · Cash on Delivery available</p>
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <svg viewBox="0 0 24 24" width="16" height="16" className="text-[#8A8A8A]"><path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                <p className="text-xs text-[#8A8A8A]">Secured by Razorpay · 100% safe payment</p>
+              </div>
             </div>
           </div>
         </div>

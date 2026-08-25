@@ -140,7 +140,7 @@ export default function Wishlist() {
                   {/* Add to cart — pinned to bottom */}
                   <button
                     onClick={() => addToCart(product)}
-                    className="mt-auto w-full flex items-center justify-center gap-2 bg-[#3D2B0E] text-white py-2.5 rounded-full text-xs font-medium hover:bg-[#5A3F1A] transition-colors"
+                    className="mt-auto w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-full text-xs font-medium hover:bg-blue-700 transition-colors"
                   >
                     <ShoppingCart size={13} />
                     Add to Cart

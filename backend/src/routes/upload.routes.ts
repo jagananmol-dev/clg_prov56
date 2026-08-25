@@ -16,7 +16,6 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { requireAdmin } from '../middleware/auth.middleware';
 import { getAdminDB } from '../lib/supabase';
-import { config } from '../config';
 
 export const uploadRouter = Router();
 
@@ -47,7 +46,6 @@ uploadRouter.post(
     }
 
     // Generate a unique filename: timestamp + sanitised original name
-    const ext      = file.originalname.split('.').pop() ?? 'jpg';
     const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filename = `${Date.now()}-${safeName}`;
     const bucket   = 'product-images';

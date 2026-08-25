@@ -26,13 +26,13 @@ interface CartItem extends Product {
 interface CartContextType {
   items: CartItem[];
   addToCart: (product: Product) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, qty: number) => void;
+  removeFromCart: (id: number | string) => void;
+  updateQuantity: (id: number | string, qty: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
-  wishlist: number[];
-  toggleWishlist: (id: number) => void;
+  wishlist: (number | string)[];
+  toggleWishlist: (id: number | string) => void;
   wishlistLoading: boolean;
 }
 
@@ -57,9 +57,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   // ── Wishlist state ─────────────────────────────────────────────────────────
-  const [wishlist, setWishlist] = useState<number[]>(() =>
-    loadFromStorage<number[]>(WISHLIST_KEY, [])
-  );
+  const [wishlist, setWishlist] = useState<(number | string)[]>(() => {
+    const stored = loadFromStorage<(number | string)[]>(WISHLIST_KEY, []);
+    // Normalize stored IDs to numbers when possible so comparisons with
+    // product.id (numbers) succeed. Also clean up stale/invalid values.
+    const normalized = stored
+      .map(id => {
+        // If it's already a number, keep it. If it's a numeric string, convert.
+        if (typeof id === 'number') return id;
+        const n = Number(id);
+        return Number.isNaN(n) ? id : n;
+      })
+      .filter(id => id !== null && id !== undefined && String(id) !== 'NaN');
+
+    return normalized;
+  });
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // Persist cart to localStorage
@@ -124,11 +136,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: number | string) => {
     setItems(prev => prev.filter(i => i.id !== id));
   };
 
-  const updateQuantity = (id: number, qty: number) => {
+  const updateQuantity = (id: number | string, qty: number) => {
     if (qty <= 0) { removeFromCart(id); return; }
     setItems(prev => prev.map(i => (i.id === id ? { ...i, quantity: qty } : i)));
   };
@@ -136,7 +148,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = () => setItems([]);
 
   // ── Wishlist toggle ────────────────────────────────────────────────────────
-  const toggleWishlist = useCallback(async (id: number) => {
+  const toggleWishlist = useCallback(async (id: number | string) => {
     const isInWishlist = wishlist.includes(id);
 
     // Optimistic update — instant UI feedback

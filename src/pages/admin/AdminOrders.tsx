@@ -6,7 +6,7 @@
  * Admin can cancel any non-delivered, non-already-cancelled order.
  */
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, XCircle, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
@@ -32,7 +32,6 @@ export default function AdminOrders() {
   const [orders,   setOrders]   = useState<Order[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const loadOrders = async () => {
@@ -44,13 +43,6 @@ export default function AdminOrders() {
   };
 
   useEffect(() => { loadOrders(); }, []); // eslint-disable-line
-
-  async function handleCancel(id: string) {
-    setCancelling(id);
-    const res = await adminFetch(`/api/admin/orders/${id}/cancel`, { method: 'PATCH' });
-    if (res.ok) loadOrders();
-    setCancelling(null);
-  }
 
   async function handleStatusChange(id: string, status: string) {
     setUpdatingStatus(id);

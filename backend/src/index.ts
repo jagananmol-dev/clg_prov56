@@ -30,6 +30,7 @@ import { authRouter } from './routes/auth.routes';
 import { productsRouter } from './routes/products.routes';
 import { ordersRouter } from './routes/orders.routes';
 import { reviewsRouter } from './routes/reviews.routes';
+import { thoughtsRouter } from './routes/thoughts.routes';
 import { uploadRouter } from './routes/upload.routes';
 
 const app = express();
@@ -68,6 +69,8 @@ const loginLimiter = rateLimit({
   skipSuccessfulRequests: true, // only count failed attempts
 });
 
+
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 // authRouter internally defines POST /login → mounts to /api/admin/login
 app.use('/api/admin/login',    loginLimiter);
@@ -75,6 +78,7 @@ app.use('/api/admin',          authRouter);
 app.use('/api/admin/products', productsRouter);
 app.use('/api/admin/orders',   ordersRouter);
 app.use('/api/admin/reviews',  reviewsRouter);
+app.use('/api/admin/thoughts', thoughtsRouter);
 // Upload route uses its own multer middleware (not express.json)
 app.use('/api/admin/upload',   uploadRouter);
 
@@ -85,6 +89,9 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'dorm-store-
 app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
 
 // ── Global error handler ──────────────────────────────────────────────────────
+// Express only recognizes this as error-handling middleware if it takes
+// exactly 4 params — `next` must stay even though the body never calls it.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[UNHANDLED ERROR]', err.message);
   res.status(500).json({ error: 'Internal server error.' });

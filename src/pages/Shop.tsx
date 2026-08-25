@@ -74,7 +74,7 @@ export default function Shop() {
     if (sortBy === 'price-high') list = [...list].sort((a, b) => b.price - a.price);
     if (sortBy === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [activeCategory, query, debouncedPrice, sortBy]);
+  }, [products, activeCategory, query, debouncedPrice, sortBy]);
 
   return (
     <div className="bg-[#FAF7F2] min-h-screen">
@@ -144,7 +144,25 @@ export default function Shop() {
               </select>
             </div>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-2xl bg-white border border-[#E8DDD0] overflow-hidden">
+                    <div className="aspect-square bg-[#F0EAE0] animate-pulse" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-3 w-2/3 bg-[#F0EAE0] rounded animate-pulse" />
+                      <div className="h-3 w-1/3 bg-[#F0EAE0] rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-2xl border border-red-200 p-8 md:p-12 text-center max-w-lg mx-auto mt-10 shadow-sm">
+                <h3 className="text-xl font-bold text-red-600 mb-2">Couldn't load products</h3>
+                <p className="text-[#5A5A5A] mb-2">{error}</p>
+                <p className="text-sm text-[#8A8A8A]">Please refresh the page or try again shortly.</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="bg-white rounded-2xl border border-[#E8DDD0] p-8 md:p-12 text-center max-w-lg mx-auto mt-10 shadow-sm">
                 <div className="w-16 h-16 bg-[#F0EAE0] rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🔍</span>

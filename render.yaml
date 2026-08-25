@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: dorm-store-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PORT
+        value: 4000
+      # Comma-separated list of allowed CORS origins — the deployed admin
+      # frontend, plus local dev. Update after you know the final Vercel URL.
+      - key: FRONTEND_ORIGIN
+        value: https://dorm-store-admin.vercel.app,http://localhost:5173
+      # Everything below is a real secret — no default here on purpose.
+      # Render will prompt for these when you create the Blueprint, or set
+      # them under Dashboard → dorm-store-api → Environment.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: ADMIN_JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 2h

@@ -48,7 +48,9 @@ export default function ProductCard({ product }: { product: Product }) {
 
         {/* Wishlist */}
         <button
-          onClick={() => toggleWishlist(product.id)}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleWishlist(product.id); }}
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          aria-pressed={isWishlisted}
           className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center hover:bg-white shadow-sm"
         >
           <Heart size={16} className={isWishlisted ? 'fill-[#7C5A2A] text-[#7C5A2A]' : 'text-[#3D2B0E]'} />
@@ -57,7 +59,7 @@ export default function ProductCard({ product }: { product: Product }) {
         {/* Quick add */}
         <button
           onClick={() => addToCart(product)}
-          className="absolute bottom-3 left-3 right-3 bg-[#3D2B0E] text-white py-2.5 rounded-full text-xs font-medium flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all"
+          className="absolute bottom-3 left-3 right-3 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-full text-xs font-medium flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all"
         >
           <ShoppingCart size={14} /> Add to Cart
         </button>

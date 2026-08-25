@@ -8,7 +8,7 @@ import { Package, ShoppingBag, MessageSquare, TrendingUp } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
-interface Stats { products: number; pendingOrders: number; totalOrders: number; reviews: number; }
+interface Stats { products: number; pendingOrders: number; totalOrders: number; reviews: number; thoughts: number; }
 
 export default function AdminDashboard() {
   const { adminFetch } = useAdminAuth();
@@ -21,12 +21,14 @@ export default function AdminDashboard() {
       adminFetch('/api/admin/products').then(r => r.json()).catch(() => ({ products: [] })),
       adminFetch('/api/admin/orders').then(r => r.json()).catch(() => ({ orders: [] })),
       adminFetch('/api/admin/reviews').then(r => r.json()).catch(() => ({ reviews: [] })),
-    ]).then(([p, o, r]) => {
+      adminFetch('/api/admin/thoughts').then(r => r.json()).catch(() => ({ thoughts: [] })),
+    ]).then(([p, o, r, t]) => {
       setStats({
         products:      p.products?.length ?? 0,
         pendingOrders: (o.orders ?? []).filter((x: {status:string}) => x.status === 'pending').length,
         totalOrders:   o.orders?.length ?? 0,
         reviews:       r.reviews?.length ?? 0,
+        thoughts:      t.thoughts?.length ?? 0,
       });
     }).catch(() => {
       setError('Cannot reach the admin backend. Make sure it is running on port 4000.');
@@ -38,6 +40,7 @@ export default function AdminDashboard() {
     { label: 'Pending Orders',  value: stats?.pendingOrders, icon: ShoppingBag,   color: 'bg-amber-50 text-amber-600' },
     { label: 'Total Orders',    value: stats?.totalOrders,   icon: TrendingUp,    color: 'bg-green-50 text-green-600' },
     { label: 'Reviews',         value: stats?.reviews,       icon: MessageSquare, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Thoughts',        value: stats?.thoughts,      icon: MessageSquare, color: 'bg-sky-50 text-sky-600' },
   ];
 
   return (

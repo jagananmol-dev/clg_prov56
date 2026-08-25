@@ -21,9 +21,17 @@ interface UseProductsReturn {
 }
 
 /** Map Supabase row (snake_case) → frontend Product type (camelCase) */
+function normalizeProductId(value: unknown): number | string {
+  if (typeof value === 'number' && Number.isInteger(value)) return value;
+  if (typeof value === 'string' && /^\s*\d+\s*$/.test(value)) {
+    return parseInt(value.trim(), 10);
+  }
+  return value as string;
+}
+
 function mapProduct(row: Record<string, unknown>): Product {
   return {
-    id:            row.id as number,
+    id:            normalizeProductId(row.id),
     name:          row.name as string,
     category:      row.category_id as string,
     price:         row.price as number,

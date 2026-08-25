@@ -108,7 +108,7 @@ export default function ProductDetail() {
               </div>
               <button
                 onClick={handleAdd}
-                className="glass-btn flex-1 text-white py-3.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
+                className="bg-blue-600 hover:bg-blue-700 transition-colors flex-1 text-white py-3.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
               >
                 <ShoppingCart size={16} /> Add to Cart
               </button>
@@ -123,7 +123,7 @@ export default function ProductDetail() {
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-3 pt-6 border-t border-[#E8DDD0]">
               {[
-                { icon: Truck, label: 'Free Shipping', sub: 'Over ₹499' },
+                { icon: Truck, label: 'Free Delivery', sub: 'On all orders' },
                 { icon: RefreshCw, label: '7-Day Returns', sub: 'Easy process' },
                 { icon: Shield, label: 'Secure Payment', sub: 'Protected' },
               ].map(b => (

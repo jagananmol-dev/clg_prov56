@@ -15,9 +15,13 @@ export default function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="bg-[#FAF7F2] rounded-xl p-3 inline-block mb-4">
-              <Logo className="h-12 w-44" />
-            </div>
+            <Link 
+              to="/" 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="bg-[#FAF7F2] rounded-xl p-4 inline-block mb-4 hover:opacity-90 transition-opacity"
+            >
+              <Logo className="h-24 w-auto object-contain" />
+            </Link>
             <p className="text-white/60 text-sm max-w-xs mb-5 leading-relaxed">
               The Dorm Store is your campus stationery partner. Quality essentials at student-friendly prices, delivered fast.
             </p>

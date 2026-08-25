@@ -9,7 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, name: string, phone: string) => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
 }
 
@@ -52,11 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, name: string) => {
+  const signUp = useCallback(async (email: string, password: string, name: string, phone: string) => {
     const { error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      options: { data: { full_name: name.trim() } },
+      // full_name + phone land in auth.users.raw_user_meta_data, which the
+      // handle_new_user() trigger copies into public.profiles on insert —
+      // this is what lets the phone number exist before any order is placed.
+      options: { data: { full_name: name.trim(), phone: phone.trim() } },
     });
     return { error: error as Error | null };
   }, []);

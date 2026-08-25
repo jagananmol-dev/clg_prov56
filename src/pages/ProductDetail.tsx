@@ -95,7 +95,13 @@ export default function ProductDetail() {
               )}
             </div>
 
-            <p className="text-sm text-[#5A5A5A] leading-relaxed mb-7">{product.description}</p>
+            {/* whitespace-pre-wrap: preserves line breaks and multi-space
+                runs exactly as the admin typed them, instead of HTML's
+                default collapse-to-one-paragraph behavior — still wraps
+                normally so a long line doesn't overflow the layout. */}
+            <p className="font-sans text-base text-[#5A5A5A] leading-relaxed mb-7 whitespace-pre-wrap">
+              {product.description}
+            </p>
 
             {/* Out of stock notice */}
             {outOfStock && (

@@ -1,9 +1,9 @@
-import { Truck, RefreshCw, Lock, Headphones } from 'lucide-react';
+import { Truck, Users, MapPin, Headphones } from 'lucide-react';
 
 const features = [
   { icon: Truck, title: 'Same Day Delivery', desc: 'On all orders' },
-  { icon: RefreshCw, title: 'Easy Returns', desc: 'Same-day return policy' },
-  { icon: Lock, title: 'Secure Payment', desc: '100% protected checkout' },
+  { icon: Users, title: 'Trusted by Seniors', desc: 'Loved by VNIT students' },
+  { icon: MapPin, title: 'Available in VNIT', desc: 'NIT Nagpur Campus' },
   { icon: Headphones, title: '24/7 Support', desc: 'Dedicated student care' },
 ];
 

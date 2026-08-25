@@ -19,6 +19,8 @@ export interface Product {
   tag?: string;       // optional badge: 'Best Seller' | 'New' | 'Premium'
   description: string;
   isFeatured?: boolean; // admin-controlled: true = shown in Best Selling section
+  isAvailable: boolean; // admin-controlled: false = out of stock, Add to Cart disabled
+  unavailableReason?: string; // shown to shoppers when isAvailable is false (e.g. "Out of stock")
 }
 
 export interface Category {

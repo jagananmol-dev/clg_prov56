@@ -26,6 +26,7 @@ const product: Product = {
   reviews: 480,
   image: 'https://example.com/pens.jpg',
   description: 'Smooth-writing gel pens.',
+  isAvailable: true,
 };
 
 describe('ProductCard icons — guest access', () => {

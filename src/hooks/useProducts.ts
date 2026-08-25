@@ -42,6 +42,10 @@ function mapProduct(row: Record<string, unknown>): Product {
     tag:           (row.tag as string) ?? undefined,
     description:   row.description as string,
     isFeatured:    Boolean(row.is_featured),
+    // Default to available when the column is missing (e.g. mid-rollout)
+    // rather than false, so a schema hiccup can't accidentally block sales.
+    isAvailable:      row.is_available === false ? false : true,
+    unavailableReason: (row.unavailable_reason as string) || undefined,
   };
 }
 

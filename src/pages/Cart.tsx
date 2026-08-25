@@ -106,6 +106,27 @@ export default function Cart() {
 
     setError(null);
 
+    // Re-check availability at the moment of checkout — a cart can sit open
+    // for a while, and an item that was in stock when added may have been
+    // marked out of stock by the admin since. Catches that race instead of
+    // trusting whatever state the page loaded with.
+    const { data: liveProducts, error: availabilityError } = await supabase
+      .from('products')
+      .select('id, name, is_available, unavailable_reason')
+      .in('id', items.map(i => i.id));
+
+    if (availabilityError) {
+      setError('Could not verify item availability. Please try again.');
+      return;
+    }
+
+    const unavailable = (liveProducts ?? []).filter(p => p.is_available === false);
+    if (unavailable.length > 0) {
+      const list = unavailable.map(p => `${p.name} (${p.unavailable_reason || 'Out of stock'})`).join(', ');
+      setError(`Some items in your cart are no longer available: ${list}. Please remove ${unavailable.length > 1 ? 'them' : 'it'} to continue.`);
+      return;
+    }
+
     // Cash on Delivery — nothing to charge now, just record the order so
     // the admin panel and the delivery agent know cash is due on arrival.
     if (paymentMethod === 'cod') {

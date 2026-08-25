@@ -4,10 +4,12 @@
  *
  * All routes require a valid admin JWT (requireAdmin middleware).
  *
- * GET    /api/admin/products        — list all products (with category name)
- * POST   /api/admin/products        — add a new product
- * PUT    /api/admin/products/:id    — edit an existing product (all fields)
- * DELETE /api/admin/products/:id    — hard delete a product
+ * GET    /api/admin/products             — list all products (with category name)
+ * POST   /api/admin/products             — add a new product
+ * PUT    /api/admin/products/:id         — edit an existing product (all fields)
+ * DELETE /api/admin/products/:id         — hard delete a product
+ * PATCH  /api/admin/products/:id/featured     — toggle Best Seller flag
+ * PATCH  /api/admin/products/:id/availability — mark in/out of stock, with a reason
  */
 import { Router } from 'express';
 import { z } from 'zod';
@@ -156,5 +158,52 @@ productsRouter.patch('/:id/featured', requireAdmin, async (req, res) => {
   }
 
   console.log(`[PRODUCTS] ${data.name} → is_featured=${is_featured}`);
+  res.json({ product: data });
+});
+
+// ── PATCH /api/admin/products/:id/availability ──────────────────────────────
+// Mark a product in/out of stock. Going unavailable requires a short reason
+// (defaults to "Out of stock" if none given); coming back available always
+// clears the reason, so a stale note can't linger on a restocked product.
+productsRouter.patch('/:id/availability', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { is_available, unavailable_reason } = req.body;
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    res.status(400).json({ error: 'Invalid product ID.' });
+    return;
+  }
+
+  if (typeof is_available !== 'boolean') {
+    res.status(400).json({ error: 'is_available must be a boolean.' });
+    return;
+  }
+
+  let reason: string | null = null;
+  if (!is_available) {
+    reason = typeof unavailable_reason === 'string' && unavailable_reason.trim()
+      ? unavailable_reason.trim()
+      : 'Out of stock';
+    if (reason.length > 200) {
+      res.status(400).json({ error: 'Reason must be 200 characters or fewer.' });
+      return;
+    }
+  }
+
+  const { data, error } = await getAdminDB()
+    .from('products')
+    .update({ is_available, unavailable_reason: reason })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[PRODUCTS] Availability update error:', error.message);
+    res.status(500).json({ error: 'Failed to update product.' });
+    return;
+  }
+
+  console.log(`[PRODUCTS] ${data.name} → is_available=${is_available}${reason ? ` (${reason})` : ''}`);
   res.json({ product: data });
 });

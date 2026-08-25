@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Star, Heart, ShoppingCart, Minus, Plus, ChevronRight, Truck, RefreshCw, Shield } from 'lucide-react';
+import { Star, Heart, ShoppingCart, Minus, Plus, ChevronRight, Truck, RefreshCw, Shield, AlertCircle } from 'lucide-react';
 import { useProduct, useProducts } from '@/hooks/useProducts';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
@@ -35,10 +35,12 @@ export default function ProductDetail() {
 
   const isWishlisted = wishlist.includes(product.id);
   const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  const outOfStock = product.isAvailable === false;
   // Use live allProducts list for related items (same category, different ID)
   const related = allProducts.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
 
   const handleAdd = () => {
+    if (outOfStock) return;
     for (let i = 0; i < qty; i++) addToCart(product);
     navigate('/cart');
   };
@@ -95,22 +97,48 @@ export default function ProductDetail() {
 
             <p className="text-sm text-[#5A5A5A] leading-relaxed mb-7">{product.description}</p>
 
+            {/* Out of stock notice */}
+            {outOfStock && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-sm text-red-700">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                <span>
+                  <strong>Out of Stock</strong>
+                  {product.unavailableReason && product.unavailableReason !== 'Out of stock'
+                    ? ` — ${product.unavailableReason}`
+                    : '. Check back soon.'}
+                </span>
+              </div>
+            )}
+
             {/* Quantity + Add */}
             <div className="flex flex-wrap items-center gap-4 mb-5">
-              <div className="flex items-center border border-[#E8DDD0] rounded-full">
-                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="p-3 text-[#3D2B0E] hover:text-[#7C5A2A]">
+              <div className={`flex items-center border border-[#E8DDD0] rounded-full ${outOfStock ? 'opacity-50' : ''}`}>
+                <button
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  disabled={outOfStock}
+                  className="p-3 text-[#3D2B0E] hover:text-[#7C5A2A] disabled:cursor-not-allowed"
+                >
                   <Minus size={16} />
                 </button>
                 <span className="px-4 text-sm font-semibold text-[#3D2B0E]">{qty}</span>
-                <button onClick={() => setQty(q => q + 1)} className="p-3 text-[#3D2B0E] hover:text-[#7C5A2A]">
+                <button
+                  onClick={() => setQty(q => q + 1)}
+                  disabled={outOfStock}
+                  className="p-3 text-[#3D2B0E] hover:text-[#7C5A2A] disabled:cursor-not-allowed"
+                >
                   <Plus size={16} />
                 </button>
               </div>
               <button
                 onClick={handleAdd}
-                className="bg-blue-600 hover:bg-blue-700 transition-colors flex-1 min-w-[140px] text-white py-3.5 rounded-full text-sm font-medium flex items-center justify-center gap-2"
+                disabled={outOfStock}
+                className={`transition-colors flex-1 min-w-[140px] py-3.5 rounded-full text-sm font-medium flex items-center justify-center gap-2 ${
+                  outOfStock
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
               >
-                <ShoppingCart size={16} /> Add to Cart
+                <ShoppingCart size={16} /> {outOfStock ? 'Out of Stock' : 'Add to Cart'}
               </button>
               <button
                 onClick={() => toggleWishlist(product.id)}

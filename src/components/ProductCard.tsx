@@ -19,18 +19,31 @@ export default function ProductCard({ product }: { product: Product }) {
   const isWishlisted = wishlist.includes(product.id);
   const original = product.originalPrice || product.price;
   const discount = original > product.price ? Math.round(((original - product.price) / original) * 100) : 0;
+  const outOfStock = product.isAvailable === false;
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-[#E8DDD0] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-      <div className="relative aspect-square overflow-hidden bg-[#FAF7F2]">
+      <div className={`relative aspect-square overflow-hidden bg-[#FAF7F2] ${outOfStock ? 'grayscale-[40%]' : ''}`}>
         <Link to={`/product/${product.id}`}>
           <img
             src={product.image}
             alt={product.name}
             loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className={`w-full h-full object-cover transition-transform duration-500 ${outOfStock ? 'opacity-60' : 'group-hover:scale-110'}`}
           />
         </Link>
+
+        {/* Out of stock overlay */}
+        {outOfStock && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+            <div className="bg-white/95 rounded-lg px-3 py-1.5 text-center shadow-sm max-w-[85%]">
+              <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Out of Stock</p>
+              {product.unavailableReason && product.unavailableReason !== 'Out of stock' && (
+                <p className="text-[10px] text-[#5A5A5A] mt-0.5 line-clamp-1">{product.unavailableReason}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tags */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
@@ -58,10 +71,15 @@ export default function ProductCard({ product }: { product: Product }) {
 
         {/* Quick add */}
         <button
-          onClick={() => addToCart(product)}
-          className="absolute bottom-3 left-3 right-3 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-full text-xs font-medium flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all"
+          onClick={() => !outOfStock && addToCart(product)}
+          disabled={outOfStock}
+          className={`absolute bottom-3 left-3 right-3 py-2.5 rounded-full text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+            outOfStock
+              ? 'bg-gray-400 text-white cursor-not-allowed opacity-100 translate-y-0'
+              : 'bg-blue-600 hover:bg-blue-700 text-white opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0'
+          }`}
         >
-          <ShoppingCart size={14} /> Add to Cart
+          <ShoppingCart size={14} /> {outOfStock ? 'Out of Stock' : 'Add to Cart'}
         </button>
       </div>
 

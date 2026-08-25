@@ -4,12 +4,15 @@
  *
  * Features:
  *  - Table of all products (image, name, category, price, tag, featured)
- *  - "Add Product" slide-in form with image upload to Supabase Storage
+ *  - "Add Product" slide-in form with image upload to Supabase Storage;
+ *    the same form reopens pre-filled to edit an existing product
  *  - ⭐ Toggle featured / Best Seller status per product
+ *  - 🚫 Mark a product out of stock with a shopper-facing reason, or
+ *    restore it — the product stays listed but Add to Cart is disabled
  *  - Delete product with confirmation dialog
  */
 import { useState, useEffect, FormEvent, useRef } from 'react';
-import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon, Star, Pencil } from 'lucide-react';
+import { Plus, Trash2, X, Package, AlertCircle, Upload, ImageIcon, Star, Pencil, Ban, PackageCheck } from 'lucide-react';
 import { useAdminAuth } from '@/context/AdminAuthContext';
 import AdminLayout from './AdminLayout';
 
@@ -25,6 +28,8 @@ interface Product {
   tag: string | null;
   description: string;
   is_featured?: boolean;
+  is_available?: boolean;
+  unavailable_reason?: string | null;
   categories?: { name: string };
 }
 interface Category { id: string; name: string; }
@@ -48,6 +53,9 @@ export default function AdminProducts() {
   const [uploading,  setUploading]  = useState(false);
   const [imgPreview, setImgPreview] = useState<string>('');
   const [imgUrl,     setImgUrl]     = useState<string>('');  // actual storage URL
+  const [stockTarget, setStockTarget] = useState<Product | null>(null); // product being marked out of stock
+  const [reasonInput,  setReasonInput]  = useState('Out of stock');
+  const [stockSaving,  setStockSaving]  = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
@@ -198,6 +206,35 @@ export default function AdminProducts() {
     if (res.ok) loadData();
   }
 
+  /** Restore a product to available — clears the reason server-side too. */
+  async function handleRestoreStock(id: string) {
+    const res = await adminFetch(`/api/admin/products/${id}/availability`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_available: true }),
+    });
+    if (res.ok) loadData();
+  }
+
+  function openMarkOutOfStock(p: Product) {
+    setReasonInput('Out of stock');
+    setStockTarget(p);
+  }
+
+  /** Confirm marking `stockTarget` out of stock with the reason typed in. */
+  async function handleConfirmOutOfStock() {
+    if (!stockTarget) return;
+    setStockSaving(true);
+    const res = await adminFetch(`/api/admin/products/${stockTarget.id}/availability`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_available: false, unavailable_reason: reasonInput.trim() || 'Out of stock' }),
+    });
+    setStockSaving(false);
+    if (res.ok) {
+      setStockTarget(null);
+      loadData();
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="p-8">
@@ -232,8 +269,10 @@ export default function AdminProducts() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E8DDD0]">
-                {products.map(p => (
-                  <tr key={p.id} className="hover:bg-[#FAF7F2]">
+                {products.map(p => {
+                  const outOfStock = p.is_available === false;
+                  return (
+                  <tr key={p.id} className={`hover:bg-[#FAF7F2] ${outOfStock ? 'opacity-60' : ''}`}>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <img src={p.image} alt={p.name} className="w-10 h-10 rounded-lg object-cover bg-[#FAF7F2]" loading="lazy" />
@@ -249,8 +288,13 @@ export default function AdminProducts() {
                       {p.is_featured && (
                         <span className="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full ml-1">⭐ Featured</span>
                       )}
+                      {outOfStock && (
+                        <span className="bg-red-100 text-red-700 text-xs px-2.5 py-1 rounded-full ml-1" title={p.unavailable_reason ?? undefined}>
+                          Out of Stock{p.unavailable_reason && p.unavailable_reason !== 'Out of stock' ? ` · ${p.unavailable_reason}` : ''}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
                       <button
                         onClick={() => openEditForm(p)}
                         title="Edit product"
@@ -266,6 +310,13 @@ export default function AdminProducts() {
                         <Star size={16} className={p.is_featured ? 'fill-amber-500 text-amber-500' : ''} />
                       </button>
                       <button
+                        onClick={() => outOfStock ? handleRestoreStock(p.id) : openMarkOutOfStock(p)}
+                        title={outOfStock ? 'Mark back in stock' : 'Mark out of stock'}
+                        className={`transition-colors mr-3 ${outOfStock ? 'text-green-600 hover:text-green-700' : 'text-[#8A8A8A] hover:text-red-500'}`}
+                      >
+                        {outOfStock ? <PackageCheck size={16} /> : <Ban size={16} />}
+                      </button>
+                      <button
                         onClick={() => setDeleteId(p.id)}
                         className="text-[#8A8A8A] hover:text-red-500 transition-colors"
                       >
@@ -273,7 +324,8 @@ export default function AdminProducts() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             {products.length === 0 && (
@@ -337,7 +389,7 @@ export default function AdminProducts() {
               {/* Price & Original Price */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Price (₹) *</label>
+                  <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Discounted Price (₹) *</label>
                   <input
                     type="number" required min={1} value={form.price}
                     onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
@@ -355,6 +407,9 @@ export default function AdminProducts() {
                   />
                 </div>
               </div>
+              <p className="text-[11px] text-[#8A8A8A] -mt-2">
+                Shoppers see the discounted price in bold with the original price struck through beside it.
+              </p>
 
               {/* Image Upload */}
               <div>
@@ -432,6 +487,39 @@ export default function AdminProducts() {
                 {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Product'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mark Out of Stock Dialog ── */}
+      {stockTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl mx-4">
+            <h3 className="font-semibold text-[#1C1C1C] mb-2">Mark Out of Stock?</h3>
+            <p className="text-sm text-[#5A5A5A] mb-4">
+              <strong>{stockTarget.name}</strong> will stay listed, but shoppers will see it as unavailable and won't be able to add it to cart.
+            </p>
+            <label className="block text-xs font-medium text-[#5A5A5A] mb-1">Reason (shown to shoppers)</label>
+            <input
+              type="text"
+              value={reasonInput}
+              onChange={e => setReasonInput(e.target.value)}
+              maxLength={200}
+              placeholder="Out of stock"
+              className="w-full border border-[#E8DDD0] rounded-xl px-3 py-2 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-[#C4A265]/40"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setStockTarget(null)} className="flex-1 border border-[#E8DDD0] py-2.5 rounded-full text-sm font-medium">
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmOutOfStock}
+                disabled={stockSaving}
+                className="flex-1 bg-red-500 text-white py-2.5 rounded-full text-sm font-medium hover:bg-red-600 disabled:opacity-60"
+              >
+                {stockSaving ? 'Saving…' : 'Mark Out of Stock'}
+              </button>
+            </div>
           </div>
         </div>
       )}

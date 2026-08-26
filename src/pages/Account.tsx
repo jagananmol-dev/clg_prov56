@@ -4,12 +4,21 @@ import { User as UserIcon, ShoppingBag, LogOut, ChevronRight } from 'lucide-reac
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
+interface OrderItemRow {
+  id: string;
+  product_id: string | null;
+  product_name: string;
+  quantity: number;
+  products: { image: string | null } | null;
+}
+
 interface OrderRow {
   id: string;
   created_at: string;
   total: number;
   status: string;
   payment_method: string;
+  order_items: OrderItemRow[];
 }
 
 export default function Account() {
@@ -51,7 +60,20 @@ export default function Account() {
 
     supabase
       .from('orders')
-      .select('id, created_at, total, status, payment_method')
+      .select(`
+        id,
+        created_at,
+        total,
+        status,
+        payment_method,
+        order_items (
+          id,
+          product_id,
+          product_name,
+          quantity,
+          products ( image )
+        )
+      `)
       .eq('user_id', user.id)            // UUID-based: only this user's orders
       .order('created_at', { ascending: false })
       .abortSignal(controller.signal)
@@ -217,10 +239,11 @@ export default function Account() {
           </p>
         ) : (
           <div className="mt-4 overflow-x-auto rounded-xl border border-[#E8DDD0]">
-            <table className="w-full min-w-[520px] text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead className="bg-[#FAF7F2] text-left text-xs uppercase tracking-wide text-[#5A5A5A]">
                 <tr>
                   <th className="px-4 py-3 font-medium">Order</th>
+                  <th className="px-4 py-3 font-medium">Items</th>
                   <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Total</th>
                   <th className="px-4 py-3 font-medium">Payment</th>
@@ -231,6 +254,29 @@ export default function Account() {
                 {orders.map(o => (
                   <tr key={o.id}>
                     <td className="px-4 py-3 text-[#1C1C1C]">#{o.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3">
+                      <div className="space-y-2">
+                        {(o.order_items ?? []).map(item => (
+                          <div key={item.id} className="flex items-center gap-2">
+                            {item.products?.image ? (
+                              <img
+                                src={item.products.image}
+                                alt={item.product_name}
+                                className="h-9 w-9 flex-shrink-0 rounded-lg object-cover border border-[#E8DDD0]"
+                              />
+                            ) : (
+                              <div className="h-9 w-9 flex-shrink-0 rounded-lg bg-[#FAF7F2] border border-[#E8DDD0]" />
+                            )}
+                            <span className="text-[#1C1C1C]">
+                              {item.product_name}
+                              {item.quantity > 1 && (
+                                <span className="text-[#8A8A8A]"> ×{item.quantity}</span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-[#5A5A5A]">
                       {new Date(o.created_at).toLocaleDateString('en-IN')}
                     </td>

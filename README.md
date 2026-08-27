@@ -229,15 +229,26 @@ Find these in Supabase Dashboard → **Project Settings → API**. See `backend/
 
 ### Step 5 — Run database migrations
 
-In your Supabase Dashboard → **SQL Editor**, run each migration file in order:
+In your Supabase Dashboard → **SQL Editor**, run **every** file in `supabase/migrations/`, **in filename order** (each one's date prefix is also its run order — some tighten RLS policies a prior file left too open, so skipping ahead or running out of order can leave you on a less-secure intermediate state):
 
 ```
 supabase/migrations/20260726165403_create_stationery_schema.sql
 supabase/migrations/20260726171514_create_products_storage_bucket.sql
+supabase/migrations/20260805_admin_reviews_table.sql
 supabase/migrations/20260805_robust_auth_schema.sql
+supabase/migrations/20260806_add_is_featured.sql
+supabase/migrations/20260806_create_storage_bucket.sql
+supabase/migrations/20260806_student_thoughts_table.sql
+supabase/migrations/20260806_wishlists_table.sql
+supabase/migrations/20260810_phone_otp_and_profile.sql
+supabase/migrations/20260825_orders_payment_id.sql
+supabase/migrations/20260825_orders_payment_method.sql
+supabase/migrations/20260825_remove_otp_verification.sql
+supabase/migrations/20260826_product_availability.sql
+supabase/migrations/20260827_lock_down_products_bucket.sql
 ```
 
-Copy-paste each file's content into the SQL editor and click **Run**.
+Copy-paste each file's content into the SQL editor and click **Run**. If you set this project up before 2026-08-27, at minimum go back and run the last one — it closes a storage bucket permission gap that earlier files never revoked.
 
 ### Step 6 — Start the dev server
 

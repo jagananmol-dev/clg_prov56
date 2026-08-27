@@ -37,6 +37,7 @@ The Dorm Store is a full-featured e-commerce SPA built for college students to b
 - 🔐 Secure auth — rate limiting, password strength meter, forgot password
 - 👤 User account page with order history (queried by UUID, not email)
 - 🗄️ Supabase backend — PostgreSQL + Row Level Security + auto-managed Auth
+- 🛡️ Separate Express admin API with its own JWT auth, audit logging, and validation middleware
 
 ---
 
@@ -48,6 +49,7 @@ The Dorm Store is a full-featured e-commerce SPA built for college students to b
 | **Language** | TypeScript | Type safety across the entire codebase |
 | **Styling** | Tailwind CSS v3 | Utility-first, consistent design system |
 | **Backend/DB** | Supabase (PostgreSQL) | Managed Postgres, built-in Auth, RLS |
+| **Admin API** | Express + TypeScript | Service-role admin operations behind JWT auth |
 | **Auth** | Supabase Auth (JWT) | Email/password with session auto-refresh |
 | **Icons** | Lucide React | Consistent, tree-shakable icon set |
 | **Router** | React Router v6 | Client-side routing with lazy-loaded pages |
@@ -57,65 +59,110 @@ The Dorm Store is a full-featured e-commerce SPA built for college students to b
 
 ## 📁 Project Structure
 
+The repo is split into two independent workspaces — `frontend/` (Vite + React store & admin SPA) and `backend/` (Express admin API) — orchestrated from the root `package.json`. Database schema lives in `supabase/` since both workspaces talk to Supabase.
+
 ```
 project/
 │
-├── index.html                  # HTML entry point with SEO meta tags
-├── vite.config.ts              # Vite + path aliases (@/ → src/)
-├── tailwind.config.js          # Tailwind content paths
-├── tsconfig.json               # TypeScript compiler options
-├── .env                        # 🔒 Local secrets (never commit this)
-├── .env.example                # Template for env variables (safe to commit)
-│
-├── public/
-│   └── images/
-│       └── logo.png            # App logo (used in Navbar and favicon)
+├── package.json                 # Root orchestrator only — `npm run dev` runs store+admin+backend together
+├── render.yaml                  # Render deploy config for the backend (rootDir: backend)
+├── scripts/
+│   └── start-dev.js             # Frees dev ports (3000/5173/4000) before starting all three servers
 │
 ├── supabase/
 │   └── migrations/
-│       ├── 20260726165403_create_stationery_schema.sql   # Initial schema (products, orders, order_items)
+│       ├── 20260726165403_create_stationery_schema.sql       # Initial schema (products, orders, order_items)
 │       ├── 20260726171514_create_products_storage_bucket.sql # Storage bucket for product images
-│       └── 20260805_robust_auth_schema.sql               # profiles table, user_id FK, strict RLS
+│       └── 20260805_robust_auth_schema.sql                   # profiles table, user_id FK, strict RLS
 │
-└── src/
-    ├── main.tsx                # React app entry point
-    ├── App.tsx                 # Root component: routing + providers + code splitting
-    ├── index.css               # Global styles + Tailwind directives + custom utilities
-    ├── vite-env.d.ts           # TypeScript types for import.meta.env
+├── backend/                      # Express admin API (Supabase service_role access)
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── .env                      # 🔒 Backend secrets (never commit this)
+│   └── src/
+│       ├── index.ts              # Server entry point
+│       ├── config.ts             # Env-driven config
+│       ├── lib/
+│       │   └── supabase.ts       # Service-role Supabase client
+│       ├── middleware/           # Express middleware
+│       │   ├── auth.middleware.ts       # JWT verification
+│       │   ├── validate.middleware.ts   # Zod request validation
+│       │   └── audit.middleware.ts      # Admin action audit logging
+│       └── routes/               # One router per resource
+│           ├── auth.routes.ts
+│           ├── categories.routes.ts
+│           ├── orders.routes.ts
+│           ├── products.routes.ts
+│           ├── reviews.routes.ts
+│           ├── thoughts.routes.ts
+│           └── upload.routes.ts
+│
+└── frontend/                     # Vite + React store & admin SPA
+    ├── index.html                 # Store HTML entry point (SEO meta tags)
+    ├── index-admin.html           # Admin HTML entry point
+    ├── package.json
+    ├── vite.config.ts             # Store config + path alias (@/ → src/)
+    ├── vite.admin.config.ts       # Admin config (separate entry/port)
+    ├── tailwind.config.js         # Tailwind content paths
+    ├── tsconfig.json              # TypeScript compiler options
+    ├── vercel.json                # Store deploy config
+    ├── vercel.admin.json          # Admin deploy config
+    ├── .env                       # 🔒 Local secrets (never commit this)
+    ├── .env.example               # Template for env variables (safe to commit)
     │
-    ├── lib/
-    │   └── supabase.ts         # Supabase client singleton
+    ├── scripts/
+    │   └── copy-admin-index.js    # Post-build step for the admin bundle
     │
-    ├── hooks/
-    │   └── useDebounce.ts      # Generic debounce hook (used by search + price slider)
+    ├── public/
+    │   └── images/
+    │       └── logo.png           # App logo (used in Navbar and favicon)
     │
-    ├── data/
-    │   └── products.ts         # Static product + category data (TypeScript, no API call)
-    │
-    ├── context/
-    │   ├── AuthContext.tsx      # Auth state: signIn, signUp, signOut, resetPassword
-    │   └── CartContext.tsx      # Cart + wishlist state (persisted to localStorage)
-    │
-    ├── components/             # Reusable UI components (used across multiple pages)
-    │   ├── Navbar.tsx           # Sticky top nav: search, wishlist badge, cart badge, user indicator
-    │   ├── Footer.tsx           # Site footer
-    │   ├── Logo.tsx             # Logo image component
-    │   ├── ProductCard.tsx      # Product tile: image, title, rating, price, wishlist toggle
-    │   ├── Hero.tsx             # Home page hero section
-    │   ├── Features.tsx         # Home page features/USP section
-    │   ├── Categories.tsx       # Home page category grid
-    │   ├── BestSelling.tsx      # Home page top-5 products carousel
-    │   ├── SaleBanner.tsx       # Promotional sale banner
-    │   └── Testimonials.tsx     # Customer reviews section
-    │
-    └── pages/                  # Route-level components (each is a lazy-loaded JS chunk)
-        ├── Home.tsx             # Landing page (assembles Home section components)
-        ├── Shop.tsx             # Product listing with filters, sort, search
-        ├── ProductDetail.tsx    # Single product view: images, details, add to cart
-        ├── Cart.tsx             # Shopping cart with quantity controls and checkout
-        ├── Wishlist.tsx         # Saved products grid with "Add all to cart" shortcut
-        ├── Account.tsx          # User profile + order history (guarded route)
-        └── AuthPage.tsx         # Login + Signup (rate limiting, password strength meter)
+    └── src/
+        ├── main.tsx                # Store entry point
+        ├── main-admin.tsx          # Admin entry point
+        ├── StoreApp.tsx            # Store root component: routing + providers + code splitting
+        ├── AdminApp.tsx            # Admin root component
+        ├── index.css               # Global styles + Tailwind directives + custom utilities
+        ├── vite-env.d.ts           # TypeScript types for import.meta.env
+        │
+        ├── lib/
+        │   └── supabase.ts         # Supabase client singleton (anon key)
+        │
+        ├── hooks/
+        │   ├── useDebounce.ts      # Generic debounce hook (used by search + price slider)
+        │   └── useProducts.ts      # Product data fetching hook
+        │
+        ├── data/
+        │   └── products.ts         # Static product + category data (TypeScript, no API call)
+        │
+        ├── context/
+        │   ├── AuthContext.tsx      # Store auth state: signIn, signUp, signOut, resetPassword
+        │   ├── AdminAuthContext.tsx # Admin auth state
+        │   └── CartContext.tsx      # Cart + wishlist state (persisted to localStorage)
+        │
+        ├── components/              # Reusable UI components (used across multiple pages)
+        │   ├── Navbar.tsx            # Sticky top nav: search, wishlist badge, cart badge, user indicator
+        │   ├── Footer.tsx            # Site footer
+        │   ├── Logo.tsx              # Logo image component
+        │   ├── ProductCard.tsx       # Product tile: image, title, rating, price, wishlist toggle
+        │   ├── Hero.tsx              # Home page hero section
+        │   ├── Features.tsx          # Home page features/USP section
+        │   ├── Categories.tsx        # Home page category grid
+        │   ├── BestSelling.tsx       # Home page top-5 products carousel
+        │   ├── SaleBanner.tsx        # Promotional sale banner
+        │   ├── Testimonials.tsx      # Customer reviews section
+        │   └── admin/
+        │       └── AdminRoute.tsx    # Admin route guard
+        │
+        └── pages/                   # Route-level components (each is a lazy-loaded JS chunk)
+            ├── Home.tsx              # Landing page (assembles Home section components)
+            ├── Shop.tsx              # Product listing with filters, sort, search
+            ├── ProductDetail.tsx     # Single product view: images, details, add to cart
+            ├── Cart.tsx              # Shopping cart with quantity controls and checkout
+            ├── Wishlist.tsx          # Saved products grid with "Add all to cart" shortcut
+            ├── Account.tsx           # User profile + order history (guarded route)
+            ├── AuthPage.tsx          # Login + Signup (rate limiting, password strength meter)
+            └── admin/                # Admin pages (dashboard, products, orders, categories, reviews, thoughts)
 ```
 
 ---
@@ -145,8 +192,11 @@ cd clg_prov56
 
 ### Step 2 — Install dependencies
 
+This installs the root orchestrator's own tiny dev deps (`concurrently`, `kill-port`). The two workspaces (`frontend/`, `backend/`) have separate `package.json` files and need their own installs:
+
 ```bash
 npm install
+npm run install:all   # installs frontend/ and backend/ dependencies
 ```
 
 ### Step 3 — Create your Supabase project
@@ -159,20 +209,23 @@ npm install
 ### Step 4 — Set up environment variables
 
 ```bash
-# Copy the example file
-cp .env.example .env
+# Frontend (store + admin SPA)
+cp frontend/.env.example frontend/.env
+
+# Backend (Express admin API)
+cp backend/.env.example backend/.env
 ```
 
-Open `.env` and fill in your Supabase credentials:
+Open `frontend/.env` and fill in your Supabase credentials:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-Find these in Supabase Dashboard → **Project Settings → API**.
+Find these in Supabase Dashboard → **Project Settings → API**. See `backend/.env.example` for the backend's own required variables (service role key, JWT secret, admin credentials).
 
-> ⚠️ **Never commit `.env` to git.** It is listed in `.gitignore`.
+> ⚠️ **Never commit `.env` files to git.** They are listed in `.gitignore`.
 
 ### Step 5 — Run database migrations
 
@@ -192,24 +245,19 @@ Copy-paste each file's content into the SQL editor and click **Run**.
 npm run dev
 ```
 
-The app will be running at **http://localhost:5173** 🎉
+This starts all three servers together: 🛒 store on **http://localhost:3000**, 🛡️ admin on **http://localhost:5173**, ⚙️ backend API on **http://localhost:4000**.
 
 ---
 
 ## 🔐 Environment Variables
 
-| Variable | Where to find it | Required |
+| Variable | Where | Required |
 |---|---|---|
-| `VITE_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | ✅ Yes |
-| `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` / `public` key | ✅ Yes |
+| `VITE_SUPABASE_URL` | `frontend/.env` — Supabase → Project Settings → API → Project URL | ✅ Yes |
+| `VITE_SUPABASE_ANON_KEY` | `frontend/.env` — Supabase → Project Settings → API → `anon` / `public` key | ✅ Yes |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`, `ADMIN_JWT_SECRET` | `backend/.env` — see `backend/.env.example` | ✅ Yes |
 
-Create an `.env.example` template (already in repo):
-
-```env
-# Copy this file to .env and fill in your values
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
+Template files are already in the repo — copy them as shown in Step 4 above.
 
 ---
 
@@ -247,12 +295,20 @@ A PostgreSQL trigger (`on_auth_user_created`) automatically inserts a row into `
 
 ## ▶️ Running Locally
 
+All commands run from the repo root and delegate into the relevant workspace:
+
 | Command | What it does |
 |---|---|
-| `npm run dev` | Start Vite dev server with HMR at localhost:5173 |
-| `npm run build` | Build production bundle to `dist/` |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint on the `src/` directory |
+| `npm run dev` | Start store + admin + backend together (ports 3000 / 5173 / 4000) |
+| `npm run dev:store` | Start only the store dev server |
+| `npm run dev:admin` | Start only the admin dev server |
+| `npm run dev:backend` | Start only the backend dev server |
+| `npm run build` | Build the store's production bundle to `frontend/dist/` |
+| `npm run build:admin` | Build the admin production bundle |
+| `npm run build:backend` | Compile the backend to `backend/dist/` |
+| `npm run lint` | Run ESLint on the frontend |
+| `npm run typecheck` | Type-check the frontend |
+| `npm run test` | Run the frontend test suite |
 
 ---
 
@@ -310,35 +366,49 @@ git rebase main             # replay your commits on top of latest main
 
 ### Bottom line
 
-This project is a **static SPA** — the build output is just HTML/CSS/JS files. Vercel or Netlify can host it for free in seconds. Docker would add Docker Desktop memory overhead (~2 GB RAM), a `Dockerfile`, and `docker-compose.yml` maintenance — none of which gives you anything useful for this architecture.
+This project is a **static SPA** frontend plus a small **Express** admin API. The frontend's build output is just HTML/CSS/JS files — Vercel or Netlify can host it for free in seconds. The backend is a lightweight Node process, easily hosted on Render (see `render.yaml`). Docker would add Docker Desktop memory overhead (~2 GB RAM) and Dockerfile/compose maintenance — not worth it at this scale.
 
-**Use Docker when:** you add a custom Express/FastAPI backend that the team needs to run locally with a specific environment.
+**Use Docker when:** the team needs the backend to run in a specific containerized environment locally or in CI.
 
 ---
 
 ## 🚢 Deployment
 
-### Option A — Vercel (Recommended, Free)
+### Frontend — Vercel (Recommended, Free)
+
+The frontend lives in `frontend/`, so each Vercel project's **Root Directory** setting must point there (Project Settings → General → Root Directory → `frontend`). Two separate Vercel projects deploy from this one repo:
+
+- **Store**: build command `npm run build`, config `frontend/vercel.json`
+- **Admin**: build command `npm run build:admin`, config `frontend/vercel.admin.json`
 
 ```bash
 npm install -g vercel
+cd frontend
 vercel --prod
 ```
 
 Add your environment variables in the Vercel dashboard → Project Settings → Environment Variables.
 
-### Option B — Netlify
+> ⚠️ If you're updating an existing Vercel project after this repo's frontend/backend split, update its **Root Directory** to `frontend` in the dashboard — the `.vercel/project.json` link now lives at `frontend/.vercel/`.
+
+### Backend — Render
+
+Deploys from `render.yaml` at the repo root, which already sets `rootDir: backend`. Create a Render Blueprint pointing at this repo and it will pick up the config automatically — no root directory change needed here.
+
+### Alternative — Netlify (frontend)
 
 ```bash
+cd frontend
 npm run build
-# Drag and drop the dist/ folder to netlify.com/drop
+# Drag and drop the frontend/dist/ folder to netlify.com/drop
 ```
 
-### Option C — GitHub Pages
+### Alternative — GitHub Pages (frontend)
 
 ```bash
+cd frontend
 npm run build
-# Push dist/ to gh-pages branch using gh-pages package
+# Push frontend/dist/ to gh-pages branch using gh-pages package
 ```
 
 ---

@@ -12,16 +12,24 @@ services:
         value: 20
       - key: PORT
         value: 4000
-      # Comma-separated list of allowed CORS origins — the deployed admin
-      # frontend, plus local dev. Update after you know the final Vercel URL.
+      # Comma-separated list of allowed CORS origins. Must include BOTH the
+      # deployed admin frontend AND the deployed customer store — the store
+      # now calls this backend directly for /api/payment/*. Update after you
+      # know both final Vercel URLs.
       - key: FRONTEND_ORIGIN
-        value: https://dorm-store-admin.vercel.app,http://localhost:5173
+        value: https://dorm-store-admin.vercel.app,https://dorm-store.vercel.app,http://localhost:5173,http://localhost:3000
       # Everything below is a real secret — no default here on purpose.
       # Render will prompt for these when you create the Blueprint, or set
       # them under Dashboard → dorm-store-api → Environment.
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Razorpay key_secret must match whatever RAZORPAY_KEY_ID / key_id you
+      # give the frontend's VITE_RAZORPAY_KEY_ID — same Razorpay account.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
         sync: false
       - key: ADMIN_EMAIL
         sync: false

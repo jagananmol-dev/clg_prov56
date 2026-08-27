@@ -27,6 +27,10 @@ export const config = {
     secret:    env('ADMIN_JWT_SECRET'),
     expiresIn: (process.env.JWT_EXPIRES_IN ?? '2h') as string,
   },
+  razorpay: {
+    keyId:     env('RAZORPAY_KEY_ID'),
+    keySecret: env('RAZORPAY_KEY_SECRET'),
+  },
   server: {
     port:           parseInt(process.env.PORT ?? '4000', 10),
     frontendOrigin: env('FRONTEND_ORIGIN'),

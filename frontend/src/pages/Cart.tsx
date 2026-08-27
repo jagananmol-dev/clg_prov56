@@ -20,6 +20,9 @@ declare global {
 // swapped per environment without a code change.
 const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID as string;
 
+// Same Express API the admin panel talks to — see backend/src/routes/payment.routes.ts.
+const API_BASE = import.meta.env.VITE_ADMIN_API_URL ?? 'http://localhost:4000';
+
 export default function Cart() {
   const { items, updateQuantity, removeFromCart, totalPrice, totalItems, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
@@ -151,13 +154,32 @@ export default function Cart() {
     setIsCheckingOut(true);
 
     try {
-      // Razorpay expects amount in paise (1 INR = 100 paise)
-      const amountInPaise = Math.round(totalPrice * 100);
+      // Ask the backend to price the cart itself (never trust totalPrice from
+      // the client) and open a Razorpay order for that authoritative amount.
+      // See backend/src/routes/payment.routes.ts for why this can't just be
+      // done here with the amount the browser already has.
+      const createOrderRes = await fetch(`${API_BASE}/api/payment/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: items.map(item => ({ id: String(item.id), quantity: item.quantity })),
+        }),
+      });
+      const orderData = await createOrderRes.json();
+
+      if (!createOrderRes.ok) {
+        setError(orderData.error || 'Could not start payment. Please try again.');
+        setIsCheckingOut(false);
+        return;
+      }
+
+      const { orderId, amount, currency } = orderData as { orderId: string; amount: number; currency: string };
 
       const options: Record<string, unknown> = {
         key: RAZORPAY_KEY,
-        amount: amountInPaise,
-        currency: 'INR',
+        order_id: orderId,
+        amount,
+        currency,
         name: 'The Dorm Store',
         description: `Order — ${totalItems} item${totalItems > 1 ? 's' : ''}`,
         image: '/images/ChatGPT_Image_Jul_24,_2026,_03_17_51_PM copy.png',
@@ -172,9 +194,28 @@ export default function Cart() {
         theme: {
           color: '#3D2B0E',
         },
-        handler: async function (response: { razorpay_payment_id: string }) {
-          // Payment succeeded — save order to Supabase
+        handler: async function (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) {
+          // Checkout reported success — but that alone is only what the
+          // browser says happened. Confirm it with the backend, which checks
+          // Razorpay's signature using the key_secret the client never sees,
+          // before treating the order as actually paid.
           try {
+            const verifyRes = await fetch(`${API_BASE}/api/payment/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response),
+            });
+            const verifyData = await verifyRes.json();
+
+            if (!verifyRes.ok || !verifyData.verified) {
+              setError('Payment could not be verified. Please contact support with payment ID: ' + response.razorpay_payment_id);
+              return;
+            }
+
             await saveOrder(response.razorpay_payment_id, 'online');
           } catch (err) {
             console.error('Order save error:', err);

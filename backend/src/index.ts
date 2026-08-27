@@ -24,6 +24,10 @@
  *  GET    /api/admin/reviews
  *  DELETE /api/admin/reviews/:id
  *  POST   /api/admin/upload   (image upload → Supabase Storage)
+ *
+ *  Customer-facing (no admin auth — see routes/payment.routes.ts):
+ *  POST   /api/payment/create-order
+ *  POST   /api/payment/verify
  */
 import express from 'express';
 import helmet from 'helmet';
@@ -38,6 +42,7 @@ import { ordersRouter } from './routes/orders.routes';
 import { reviewsRouter } from './routes/reviews.routes';
 import { thoughtsRouter } from './routes/thoughts.routes';
 import { uploadRouter } from './routes/upload.routes';
+import { paymentRouter } from './routes/payment.routes';
 
 const app = express();
 
@@ -88,6 +93,8 @@ app.use('/api/admin/reviews',  reviewsRouter);
 app.use('/api/admin/thoughts', thoughtsRouter);
 // Upload route uses its own multer middleware (not express.json)
 app.use('/api/admin/upload',   uploadRouter);
+// Customer-facing — unauthenticated by design, see routes/payment.routes.ts
+app.use('/api/payment',        paymentRouter);
 
 // ── Health check (unauthenticated — for uptime monitors) ─────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'dorm-store-admin-api' }));

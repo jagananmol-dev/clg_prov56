@@ -18,6 +18,8 @@ const updateStatusSchema = z.object({
   status: z.enum(['pending', 'approved', 'rejected']),
 });
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 thoughtsRouter.get('/', requireAdmin, async (_req, res) => {
   const { data, error } = await getAdminDB()
     .from('student_thoughts')
@@ -36,6 +38,11 @@ thoughtsRouter.get('/', requireAdmin, async (_req, res) => {
 thoughtsRouter.patch('/:id/status', requireAdmin, validate(updateStatusSchema), async (req, res) => {
   const { id } = req.params;
   const { status } = req.body as { status: 'pending' | 'approved' | 'rejected' };
+
+  if (!UUID_REGEX.test(id)) {
+    res.status(400).json({ error: 'Invalid thought ID.' });
+    return;
+  }
 
   const updatePayload = status === 'approved'
     ? { status, approved_at: new Date().toISOString() }
@@ -59,6 +66,11 @@ thoughtsRouter.patch('/:id/status', requireAdmin, validate(updateStatusSchema), 
 
 thoughtsRouter.delete('/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
+
+  if (!UUID_REGEX.test(id)) {
+    res.status(400).json({ error: 'Invalid thought ID.' });
+    return;
+  }
 
   const { error } = await getAdminDB()
     .from('student_thoughts')
